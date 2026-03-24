@@ -43,7 +43,7 @@ Since the model weights and datasets are distributed across different sources, w
 
 ### 1. Model Weights
 
-Please download the model weights `peft_model.zip` and `predictor.zip` from [Models Link](https://cloud.tsinghua.edu.cn/d/29c75b36a8d94016a402/), unzip the folders and place them in `./checkpoints` directory.
+Please download the model weights `peft_model.zip` and `predictor.zip` from [Models Link](https://cloud.tsinghua.edu.cn/d/28b9517c6b13484c8911/), unzip the folders and place them in `./checkpoints` directory.
 
 After that, please download the following models from Hugging Face and place them in the specified path as shown below.
 
