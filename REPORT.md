@@ -200,21 +200,17 @@ The peak memory column is essentially flat across all four rows. The mean forwar
 
 Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
 
-![Mean forward loss across the three states](output_figures/extensions/token_merging/loss.pdf)
+![Per document forward loss across the three states](output_figures/extensions/token_merging/exp-extension-token-merging-perdoc.pdf)
 
-*Figure 7. Mean forward loss across the three states on four held out RedPajama documents at 8 K context.*
+*Figure 7. Per document forward loss across the three states. Bars are grouped by held out document and colored by state, in the same idiom as the end to end time sequence figure. The catastrophic failure of the original adapter under token merging is uniform across documents, and the retrained adapter wins on every document under token merging.*
 
-![Approximate perplexity across the three states](output_figures/extensions/token_merging/ppl.pdf)
+![Normalized loss, PPL, and peak memory across the three states](output_figures/extensions/token_merging/exp-extension-token-merging-comparison.pdf)
 
-*Figure 8. Approximate perplexity (exp of mean forward loss) across the three states. The middle bar dominates the axis because that configuration is broken; the other two are an order of magnitude smaller.*
-
-![Peak GPU memory across the three states](output_figures/extensions/token_merging/memory.pdf)
-
-*Figure 9. Peak GPU memory in GB across the three states. The three bars are within 1.5 MB of one another; the y axis is in GB and the differences are not visually distinguishable.*
+*Figure 8. Normalized mean loss, PPL, and peak GPU memory across the three states, each metric scaled so its maximum is 1.0. Shape matches the end to end memory comparison figure idiom. Peak memory is essentially constant across states; loss and PPL move together but on different scales.*
 
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
 
-*Figure 10. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+*Figure 9. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
 
 ## 7. Discussion
 
