@@ -1,18 +1,18 @@
-"""Token merging comparison plots in the codebase's standard styles.
+"""Token merging comparison figures in the codebase's beady line idiom.
 
-Two figures are produced.
+Both figures use the visual pattern of src/experiment/ablation/algorithm/
+plot_llama2_attn.py: black lines with colored circular markers, dashed y
+grid, compact aspect, horizontal legend laid out on top of the axes
+outside the figure box. All labels are Title Case and bbox_inches='tight'
+is used at save time so no label is ever clipped.
 
   exp-extension-token-merging-perdoc.pdf
-    Mimics src/experiment/end2end/time/plot_sequence.py: grouped bars
-    across the four held out documents, one colored bar per state.
-    Reveals per document variance and the consistency of each state.
+    Forward Loss versus Held Out Document, one line per state.
 
   exp-extension-token-merging-comparison.pdf
-    Mimics src/experiment/end2end/memory/plot_comparison_8k.py: grouped
-    bars with three states on the x axis and the three reported metrics
-    as colored bars within each group, normalized so they fit on a
-    single y axis. Reproduces the visual idiom of the end to end memory
-    figure.
+    Normalized Loss, PPL, and Peak Memory across the three states. Each
+    metric is normalized so its maximum is 1.0 and drawn as a separate
+    beaded line.
 """
 import argparse
 import csv
@@ -25,7 +25,7 @@ import numpy as np
 PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
 
 STATE_KEYS = ["orig_hd", "orig_merge", "retrain_merge"]
-STATE_LABELS = ["Original\nhard drop", "Original\ntoken merging", "Retrained\ntoken merging"]
+STATE_LABELS = ["Original Hard Drop", "Original Token Merging", "Retrained Token Merging"]
 PER_DOC_LOSS = {
     "orig_hd": [1.6641, 2.4219, 3.4219, 1.9141],
     "orig_merge": [4.9375, 4.0625, 4.1875, 4.8438],
@@ -52,28 +52,46 @@ def collect_means(csv_path):
     return out
 
 
+def beady_line(ax, x, y, color, label):
+    ax.plot(x, y,
+            color="black",
+            marker="o",
+            markersize=6,
+            markerfacecolor=color,
+            markeredgewidth=0.7,
+            linewidth=1.2,
+            zorder=100,
+            label=label)
+
+
+def horizontal_top_legend(fig, ax, ncols):
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels,
+               loc="upper center",
+               bbox_to_anchor=(0.5, 1.02),
+               ncol=ncols,
+               frameon=False,
+               fontsize=11)
+
+
 def plot_perdoc(out_path):
     n_docs = len(PER_DOC_LOSS["orig_hd"])
-    x = np.arange(n_docs)
-    bar_width = 0.25
+    x = np.arange(1, n_docs + 1)
 
-    fig, ax = plt.subplots(figsize=(8, 2))
+    fig, ax = plt.subplots(figsize=(7, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
-
     for i, key in enumerate(STATE_KEYS):
-        offset = (i - 1) * bar_width
-        ax.bar(x + offset, PER_DOC_LOSS[key], bar_width,
-               color=PALETTE[i], edgecolor="black", zorder=3,
-               label=STATE_LABELS[i].replace("\n", " "))
+        beady_line(ax, x, PER_DOC_LOSS[key], PALETTE[i], STATE_LABELS[i])
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"Doc {i + 1}" for i in range(n_docs)], fontsize=14)
-    ax.tick_params(axis="y", labelsize=14)
-    ax.set_xlabel("Held out document", fontsize=14)
-    ax.set_ylabel("Forward loss", fontsize=14)
-    ax.legend(loc="upper right", fontsize=10, framealpha=0.9)
-    plt.tight_layout()
-    plt.savefig(out_path)
+    ax.set_xticklabels([f"Doc {i}" for i in x], fontsize=12)
+    ax.tick_params(axis="y", labelsize=12)
+    ax.set_xlabel("Held Out Document", fontsize=13)
+    ax.set_ylabel("Forward Loss", fontsize=13)
+    ax.set_ylim(0, max(max(v) for v in PER_DOC_LOSS.values()) * 1.15)
+
+    horizontal_top_legend(fig, ax, ncols=3)
+    plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")
 
@@ -81,34 +99,24 @@ def plot_perdoc(out_path):
 def plot_comparison(means, out_path):
     metric_keys = ["mean_loss", "ppl_approx", "peak_memory_mb"]
     metric_labels = ["Loss", "PPL", "Peak Memory"]
-    n_states = len(STATE_KEYS)
     raw = {m: [float(means[s][m]) for s in STATE_KEYS] for m in metric_keys}
-
-    # Normalize each metric so its maximum is 1.0 (the same idiom as
-    # plot_sequence.py and plot_comparison_8k.py use to put multiple
-    # metrics on a common y axis).
     norm = {m: [v / max(raw[m]) for v in raw[m]] for m in metric_keys}
 
-    x = np.arange(n_states)
-    bar_width = 0.25
+    x = np.arange(1, len(STATE_KEYS) + 1)
 
-    fig, ax = plt.subplots(figsize=(8, 2))
+    fig, ax = plt.subplots(figsize=(7, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
-
     for i, m in enumerate(metric_keys):
-        offset = (i - 1) * bar_width
-        ax.bar(x + offset, norm[m], bar_width,
-               color=PALETTE[i], edgecolor="black", zorder=3,
-               label=metric_labels[i])
+        beady_line(ax, x, norm[m], PALETTE[i], metric_labels[i])
 
     ax.set_xticks(x)
-    ax.set_xticklabels(STATE_LABELS, fontsize=12)
-    ax.tick_params(axis="y", labelsize=14)
-    ax.set_ylabel("Normalized to max", fontsize=14)
+    ax.set_xticklabels(STATE_LABELS, fontsize=11)
+    ax.tick_params(axis="y", labelsize=12)
+    ax.set_ylabel("Normalized To Max", fontsize=13)
     ax.set_ylim(0, 1.15)
-    ax.legend(loc="upper right", fontsize=10, framealpha=0.9)
-    plt.tight_layout()
-    plt.savefig(out_path)
+
+    horizontal_top_legend(fig, ax, ncols=3)
+    plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")
 

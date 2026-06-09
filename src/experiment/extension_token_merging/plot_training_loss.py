@@ -1,9 +1,9 @@
-"""Plot the I4 LoRA training loss curve in the repo's standard line plot style.
+"""Plot the I4 LoRA training loss curve.
 
-Matches src/experiment/extension_cnn_predictor/plot_loss.py: 6 x 4 figure,
-single dark line for the raw trace, single accent line for the smoothed
-trace, alpha shaded band omitted (only one seed). Simple xlabel /
-ylabel / legend, tight layout.
+Style matches the project's other loss curves: 6 x 4 figure, raw trace
+in dashed dark grey, smoothed trace in the project blue, horizontal
+legend laid out on top of the axes outside the figure box. All labels
+Title Case, bbox_inches='tight' so labels are never clipped.
 """
 import argparse
 import ast
@@ -59,14 +59,24 @@ def main():
     smoothed = moving_average(losses, args.window)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    plt.figure(figsize=(6, 4))
-    plt.plot(steps, losses, label="raw", linestyle="--", color="#444", linewidth=1)
-    plt.plot(steps, smoothed, label=f"{args.window} step MA", linestyle="-", color="#1f77b4", linewidth=2)
-    plt.xlabel("Training step")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.tight_layout()
-    plt.savefig(args.out)
+    fig, ax = plt.subplots(figsize=(7, 3.6))
+    ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+    ax.plot(steps, losses, label="Raw Loss", linestyle="--",
+            color="#444", linewidth=1, zorder=2)
+    ax.plot(steps, smoothed, label=f"{args.window} Step Moving Average",
+            linestyle="-", color="#1f77b4", linewidth=2, zorder=3)
+    ax.set_xlabel("Training Step", fontsize=13)
+    ax.set_ylabel("Loss", fontsize=13)
+    ax.tick_params(axis="both", labelsize=12)
+
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels,
+               loc="upper center",
+               bbox_to_anchor=(0.5, 1.02),
+               ncol=2,
+               frameon=False,
+               fontsize=11)
+    plt.savefig(args.out, bbox_inches="tight")
     plt.close()
     print(f"wrote {args.out} ({len(losses)} points)")
 
