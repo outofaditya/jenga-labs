@@ -1,18 +1,22 @@
-"""Token merging comparison figures in the codebase's beady line idiom.
+"""Token merging comparison figures.
 
-Both figures use the visual pattern of src/experiment/ablation/algorithm/
-plot_llama2_attn.py: black lines with colored circular markers, dashed y
-grid, compact aspect, horizontal legend laid out on top of the axes
-outside the figure box. All labels are Title Case and bbox_inches='tight'
-is used at save time so no label is ever clipped.
+Two figures are produced.
 
   exp-extension-token-merging-perdoc.pdf
-    Forward Loss versus Held Out Document, one line per state.
+    Per held out document forward loss as a beady line chart, one line
+    per state, in the visual idiom of the algorithm ablation figures
+    (src/experiment/ablation/algorithm/plot_*_attn.py). Horizontal
+    legend laid out on top of the axes outside the figure box.
 
   exp-extension-token-merging-comparison.pdf
-    Normalized Loss, PPL, and Peak Memory across the three states. Each
-    metric is normalized so its maximum is 1.0 and drawn as a separate
-    beaded line.
+    Normalized Loss, PPL, and Peak Memory across the three states.
+    Grouped bar chart in the idiom of the end to end memory comparison
+    figure (src/experiment/end2end/memory/plot_comparison_8k.py).
+    Horizontal legend laid out on top of the axes outside the figure
+    box.
+
+All axis and legend labels are Title Case. Every save uses
+bbox_inches='tight' so no label is clipped.
 """
 import argparse
 import csv
@@ -52,18 +56,6 @@ def collect_means(csv_path):
     return out
 
 
-def beady_line(ax, x, y, color, label):
-    ax.plot(x, y,
-            color="black",
-            marker="o",
-            markersize=6,
-            markerfacecolor=color,
-            markeredgewidth=0.7,
-            linewidth=1.2,
-            zorder=100,
-            label=label)
-
-
 def horizontal_top_legend(fig, ax, ncols):
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels,
@@ -75,13 +67,22 @@ def horizontal_top_legend(fig, ax, ncols):
 
 
 def plot_perdoc(out_path):
+    """Beady line chart - the loss landscape across held out documents."""
     n_docs = len(PER_DOC_LOSS["orig_hd"])
     x = np.arange(1, n_docs + 1)
 
     fig, ax = plt.subplots(figsize=(7, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, key in enumerate(STATE_KEYS):
-        beady_line(ax, x, PER_DOC_LOSS[key], PALETTE[i], STATE_LABELS[i])
+        ax.plot(x, PER_DOC_LOSS[key],
+                color="black",
+                marker="o",
+                markersize=6,
+                markerfacecolor=PALETTE[i],
+                markeredgewidth=0.7,
+                linewidth=1.2,
+                zorder=100,
+                label=STATE_LABELS[i])
 
     ax.set_xticks(x)
     ax.set_xticklabels([f"Doc {i}" for i in x], fontsize=12)
@@ -97,17 +98,23 @@ def plot_perdoc(out_path):
 
 
 def plot_comparison(means, out_path):
+    """Grouped bar chart - normalized metric comparison across states."""
     metric_keys = ["mean_loss", "ppl_approx", "peak_memory_mb"]
     metric_labels = ["Loss", "PPL", "Peak Memory"]
     raw = {m: [float(means[s][m]) for s in STATE_KEYS] for m in metric_keys}
     norm = {m: [v / max(raw[m]) for v in raw[m]] for m in metric_keys}
 
-    x = np.arange(1, len(STATE_KEYS) + 1)
+    n_states = len(STATE_KEYS)
+    bar_width = 0.25
+    x = np.arange(n_states)
 
     fig, ax = plt.subplots(figsize=(7, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, m in enumerate(metric_keys):
-        beady_line(ax, x, norm[m], PALETTE[i], metric_labels[i])
+        offset = (i - 1) * bar_width
+        ax.bar(x + offset, norm[m], bar_width,
+               color=PALETTE[i], edgecolor="black", zorder=3,
+               label=metric_labels[i])
 
     ax.set_xticks(x)
     ax.set_xticklabels(STATE_LABELS, fontsize=11)
