@@ -52,7 +52,15 @@ Jenga peak memory is **44.7% lower** than baseline on the same configuration. Th
 
 ### 4.1 Memory (Reproduces Paper Figure 12)
 
-Atom R1 ran LoRA, LongLoRA, and Jenga across Llama 2 7B and OPT-1.3B at sequence lengths 4096 and 8192 on the A100 80GB. The grouped bar chart at `output_figures/end2end/memory/exp-end2end-memory-{4K,8K}-comparison.pdf` reproduces the qualitative shape of the paper's Figure 12.
+Atom R1 ran LoRA, LongLoRA, and Jenga across Llama 2 7B and OPT-1.3B at sequence lengths 4096 and 8192 on the A100 80GB. The grouped bar charts reproduce the qualitative shape of the paper's Figure 12.
+
+**Figure 4.1a** — paste exactly this image in the LaTeX as the first 4.1 figure (caption: "Peak GPU memory for LoRA, LongLoRA, and Jenga at 4096 tokens on Llama 2 7B and OPT-1.3B."):
+
+![Peak memory at 4K context](output_figures/end2end/memory/exp-end2end-memory-4K-comparison.pdf)
+
+**Figure 4.1b** — paste exactly this image after Figure 4.1a (caption: "Peak GPU memory for LoRA, LongLoRA, and Jenga at 8192 tokens on Llama 2 7B and OPT-1.3B."):
+
+![Peak memory at 8K context](output_figures/end2end/memory/exp-end2end-memory-8K-comparison.pdf)
 
 | Model | Seq | LoRA (GB) | LongLoRA (GB) | Jenga (GB) | Jenga vs LoRA |
 | --- | --- | --- | --- | --- | --- |
@@ -65,23 +73,45 @@ Our numbers match the authors' shipped logs to within ~1% on the same configurat
 
 ### 4.2 Time (Reproduces Paper Figure 13)
 
-Insert grouped bar chart of mean step time with standard deviation as error bars. Annotate the relative speedup.
+To be populated by Atom R2. Required figures:
+
+**Figure 4.2** — paste exactly this image (caption: "Mean training step time for LoRA, LongLoRA, and Jenga across the same configurations as Figure 4.1, on A100 80GB."):
+
+![Execution time comparison](output_figures/end2end/time/exp-end2end-time-a800-comparison.pdf)
 
 ### 4.3 Memory Breakdown (Reproduces Paper Figure 14 Upper)
 
-Insert stacked horizontal bar chart of model state, activations, predictor, others.
+To be populated by Atom R3. Required figure:
+
+**Figure 4.3** — paste exactly this image (caption: "Decomposition of Jenga peak memory into model state, activations, predictor overhead, and others on Llama 2 7B at three sequence lengths."):
+
+![Memory breakdown](output_figures/ablations/memory-breakdown/exp-ablation-mem-breakdown.pdf)
 
 ### 4.4 Perplexity (Reproduces Paper Table 7)
 
-Insert table cross referencing sequence length against baseline LoRA and Jenga perplexity on `proof_pile.bin` and `pg.bin`. State explicitly that these are the paper's benchmark files.
+To be populated by Atom R5. The PPL table is rendered at `logs/results/atom_results.md` filtered to `atom == R5`. Render it inline in LaTeX as `\input{report/tables/r5_ppl.tex}` after generation. Source data file: `logs/results/atom_results.jsonl`. State explicitly that the benchmarks are the paper's own `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`.
 
 ### 4.5 Segmented Loss (Reproduces Paper Figure 18)
 
-Insert the memory viz visualization or its summary table for naive versus segmented loss at sequence length 16384.
+To be populated by Atom R4. The segment ablation emits two PyTorch memory viz pickle files at `logs/ablations/segment/{base,seg}.pickle`. Drag each into `docs.pytorch.org/memory_viz`, screenshot the rendered timeline, and save the screenshots:
+
+**Figure 4.5a** — paste this image (caption: "Naive auto-regressive loss memory timeline at 16384 tokens; the spike from the full-vocabulary logits dominates the peak."):
+
+![Naive segmented loss](output_figures/ablations/segment/naive.png)
+
+**Figure 4.5b** — paste this image (caption: "Segmented loss memory timeline; the terminal spike is removed by chunked backward."):
+
+![Segmented loss](output_figures/ablations/segment/segmented.png)
 
 ### 4.6 Optional Reproduction Items
 
-If executed, predictor convergence (Paper Figure 16) and algorithm ablation (Paper Figure 15). If skipped, state explicitly that we cite the paper directly here.
+If executed, paste:
+
+**Figure 4.6a** — algorithm ablation (Paper Figure 15) at `output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-attn.pdf` and the corresponding `-mlp.pdf` / `-opt-attn.pdf` / `-opt-mlp.pdf` files.
+
+**Figure 4.6b** — predictor convergence (Paper Figure 16) at `output_figures/ablations/predictor/exp-ablation-predictor-loss.pdf`.
+
+If skipped due to budget, state explicitly that the corresponding figures are cited from the original paper and not re-run.
 
 ## 5. Extension Design
 
@@ -103,15 +133,33 @@ State the hypothesis. Document the known integration risk in `PrunedLlamaMLPFunc
 
 ### 6.1 Extension A Results
 
-Insert scatter of predictor entropy versus token retention ratio. Insert bar chart of perplexity across the swept `lam` values plus the equal budget Jenga baseline. State whether the trend matches the hypothesis.
+To be populated by Atom I1. Required figures:
+
+**Figure 6.1a** — paste this image (caption: "Predictor entropy versus token retention ratio per layer per batch, Llama 2 7B at 8192 tokens, three seeds."):
+
+![Adaptive threshold entropy vs retention](output_figures/extensions/adaptive_thresholds/scatter.pdf)
+
+**Figure 6.1b** — paste this image (caption: "Perplexity on the paper's PPL benchmarks across swept `lam` values plus the equal-budget static-threshold Jenga baseline."):
+
+![Adaptive threshold PPL comparison](output_figures/extensions/adaptive_thresholds/ppl_bar.pdf)
 
 ### 6.2 Extension B Results
 
-Insert the dual line plot of epoch versus MSE loss for the MLP and CNN predictors. State convergence rate and final loss comparison.
+To be populated by Atom I2. Required figure:
+
+**Figure 6.2** — paste this image (caption: "Offline predictor training MSE loss versus epoch for the MLP predictor (dashed) and the CNN predictor (solid), three seeds each, RedPajama subset."):
+
+![CNN vs MLP predictor convergence](output_figures/extensions/cnn_predictor/loss_curve.pdf)
 
 ### 6.3 Extension C Results
 
-Insert grouped bar chart of peak memory at sequence length 16384 across LoRA, Jenga, and Jenga plus QLoRA. If the integration failed, document the failure mode and the dequantization mitigation attempt.
+To be populated by Atom I3. Required figure:
+
+**Figure 6.3** — paste this image (caption: "Peak GPU memory at 16384 tokens for Llama 2 7B across LoRA, Jenga, and Jenga plus QLoRA (attention only 4-bit)."):
+
+![Jenga + QLoRA memory](output_figures/extensions/qlora_synergy/memory_bar.pdf)
+
+If the integration failed at runtime, paste the stack trace excerpt from `logs/extensions/qlora_synergy/crash_trace.txt` instead and state in prose what the failure mode was.
 
 ## 7. Discussion
 
