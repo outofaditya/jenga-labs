@@ -12,3 +12,15 @@
 {"atom": "R1", "log": "logs/end2end/memory/opt-1.3b-8192-a800-baseline.log", "method": "baseline", "model": "opt-1.3b", "peak_memory_mb": 23472.13720703125, "seq_len": 8192}
 {"atom": "R1", "log": "logs/end2end/memory/opt-1.3b-8192-a800-llora.log", "method": "llora", "model": "opt-1.3b", "peak_memory_mb": 25008.13720703125, "seq_len": 8192}
 {"atom": "R1", "log": "logs/end2end/memory/opt-1.3b-8192-a800.log", "method": "jenga", "model": "opt-1.3b", "peak_memory_mb": 15356.22265625, "seq_len": 8192}
+{"atom": "R2", "log": "logs/end2end/time/llama2-4096-a800-baseline.log", "method": "baseline", "model": "llama2", "seq_len": 4096, "step_time_ms": 871.9060926437378}
+{"atom": "R2", "log": "logs/end2end/time/llama2-4096-a800-llora.log", "method": "llora", "model": "llama2", "seq_len": 4096, "step_time_ms": 883.5422041416168}
+{"atom": "R2", "log": "logs/end2end/time/llama2-4096-a800.log", "method": "jenga", "model": "llama2", "seq_len": 4096, "step_time_ms": 804.9352099895477}
+{"atom": "R2", "log": "logs/end2end/time/llama2-8192-a800-baseline.log", "method": "baseline", "model": "llama2", "seq_len": 8192, "step_time_ms": 1886.1144416332245}
+{"atom": "R2", "log": "logs/end2end/time/llama2-8192-a800-llora.log", "method": "llora", "model": "llama2", "seq_len": 8192, "step_time_ms": 1788.6520793437958}
+{"atom": "R2", "log": "logs/end2end/time/llama2-8192-a800.log", "method": "jenga", "model": "llama2", "seq_len": 8192, "step_time_ms": 1683.6179456710815}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-4096-a800-baseline.log", "method": "baseline", "model": "opt-1.3b", "seq_len": 4096, "step_time_ms": 238.40591859817505}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-4096-a800-llora.log", "method": "llora", "model": "opt-1.3b", "seq_len": 4096, "step_time_ms": 239.26298022270203}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-4096-a800.log", "method": "jenga", "model": "opt-1.3b", "seq_len": 4096, "step_time_ms": 228.90918803215027}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-8192-a800-baseline.log", "method": "baseline", "model": "opt-1.3b", "seq_len": 8192, "step_time_ms": 512.1877732276917}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-8192-a800-llora.log", "method": "llora", "model": "opt-1.3b", "seq_len": 8192, "step_time_ms": 467.9216458797455}
+{"atom": "R2", "log": "logs/end2end/time/opt-1.3b-8192-a800.log", "method": "jenga", "model": "opt-1.3b", "seq_len": 8192, "step_time_ms": 469.5931522846222}

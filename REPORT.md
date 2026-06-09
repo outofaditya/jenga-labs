@@ -73,9 +73,18 @@ Our numbers match the authors' shipped logs to within ~1% on the same configurat
 
 ### 4.2 Time (Reproduces Paper Figure 13)
 
-To be populated by Atom R2. Required figures:
+Atom R2 ran the same 12 (model, seq_len, method) combinations as R1 with the time profiling driver on A100 80GB. Median per-step total time (forward + backward + optimizer step), excluding the warmup first step:
 
-**Figure 4.2** — paste exactly this image (caption: "Mean training step time for LoRA, LongLoRA, and Jenga across the same configurations as Figure 4.1, on A100 80GB."):
+| Model | Seq | LoRA (ms) | LongLoRA (ms) | Jenga (ms) | Jenga speedup |
+| --- | --- | --- | --- | --- | --- |
+| Llama 2 7B | 4K | 872 | 884 | 805 | 1.08x |
+| Llama 2 7B | 8K | 1886 | 1789 | 1684 | 1.12x |
+| OPT-1.3B | 4K | 238 | 239 | 229 | 1.04x |
+| OPT-1.3B | 8K | 512 | 468 | 470 | 1.09x |
+
+Our 8K Llama 2 speedup of 1.12x matches the authors' shipped log within 1%. The time savings are smaller than the memory savings (Section 4.1) because Jenga's reduction is in token count entering attention and MLP — the savings on bytes-of-activations scale near linearly, while step time also includes weight-bound matmuls whose cost is fixed.
+
+**Figure 4.2** — paste exactly this image (caption: "Median per step training time for LoRA, LongLoRA, and Jenga across the same configurations as Figure 4.1, on A100 80GB."):
 
 ![Execution time comparison](output_figures/end2end/time/exp-end2end-time-a800-comparison.pdf)
 

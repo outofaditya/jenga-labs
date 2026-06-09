@@ -21,7 +21,7 @@ from pathlib import Path
 
 
 PEAK_MEM_RE = re.compile(r"peak memory: ([\d.]+)")
-STEP_TIME_RE = re.compile(r"(\d+\.\d+)\s*it/s")
+TOTAL_TIME_RE = re.compile(r"total time:\s*([\d.]+)")
 
 
 def parse_peak_memory_mb(log_path: str) -> float:
@@ -35,15 +35,17 @@ def parse_peak_memory_mb(log_path: str) -> float:
 
 
 def parse_step_time_ms(log_path: str) -> float:
-    """Mean step time in ms inferred from the last tqdm 'it/s' field."""
-    last = None
+    """Median per step total time in ms from `total time: <ms>` lines, excluding the first (warmup)."""
+    vals = []
     with open(log_path) as f:
         for line in f:
-            for m in STEP_TIME_RE.finditer(line):
-                last = float(m.group(1))
-    if not last:
+            m = TOTAL_TIME_RE.search(line)
+            if m:
+                vals.append(float(m.group(1)))
+    if len(vals) <= 1:
         return float("nan")
-    return 1000.0 / last
+    steady = sorted(vals[1:])
+    return steady[len(steady) // 2]
 
 
 METRIC_PARSERS = {
