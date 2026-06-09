@@ -568,18 +568,51 @@ class LlamaFlashAttention2(LlamaAttention):
                             })
                     q_len_now = int(sum_q.size(1) * sparse_ratio)
                                     
-                _, idx = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
-                idx = idx.sort().values
-                # print(f"layer {self.layer_idx}, {idx}")
-                base = torch.arange(64, device=idx.device).view(1, 1, 64)  # (1, 1, 64)
-                expanded_idx = idx[..., None] * 64 + base  # (bsz, q_len_now, 64)
-                idx = expanded_idx.view(-1)  # (bsz, q_len_now * 64)
-                
-                q_len_now *= 64   
+                _, idx_blocks = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
+                idx_blocks = idx_blocks.sort().values  # (bsz, q_len_now) kept block ids
+                num_blocks_total = sum_q.size(1)
+                # Extension C (I3): soft elimination via mean pooling. When
+                # config.merge_eliminated is True and any blocks would be
+                # dropped, mean pool the dropped block tokens into one merged
+                # block appended to the kept tokens. With the flag False the
+                # path is identical to the original hard drop.
+                merge_eliminated = (
+                    self.layer_idx >= 15
+                    and bool(getattr(self.config, "merge_eliminated", False))
+                    and q_len_now < num_blocks_total
+                )
+                # block-level kept indices
+                kept_block_idx = idx_blocks
+                # Compute dropped block indices (per batch)
+                if merge_eliminated:
+                    keep_mask = torch.zeros(bsz, num_blocks_total, dtype=torch.bool, device=idx_blocks.device)
+                    keep_mask.scatter_(1, kept_block_idx, True)
+                    # For bsz=1 (the artifact's runtime assumption) take the
+                    # dropped block indices directly:
+                    dropped_block_idx = torch.nonzero(~keep_mask[0], as_tuple=True)[0]
+                base = torch.arange(64, device=idx_blocks.device).view(1, 1, 64)  # (1, 1, 64)
+                expanded_idx = kept_block_idx[..., None] * 64 + base  # (bsz, q_len_now, 64)
+                idx = expanded_idx.view(-1)
+                q_len_now *= 64
+                if merge_eliminated:
+                    drop_token_idx = (dropped_block_idx[:, None] * 64 +
+                                       torch.arange(64, device=idx_blocks.device).view(1, 64)).view(-1)
+                    # mean RoPE position for the merged block, replicated 64x
+                    merged_pos = int(drop_token_idx.float().mean().item())
+                    merge_idx = torch.full((64,), merged_pos, device=idx.device, dtype=idx.dtype)
                 del sum_q, hidden_states_
-            
+
             # query_states = query_states[:, :, idx, :]
-            hidden_states = hidden_states[:, idx, :]
+            if merge_eliminated:
+                kept_hidden = hidden_states[:, idx, :]
+                dropped_hidden = hidden_states[:, drop_token_idx, :]
+                merged_vec = dropped_hidden.mean(dim=1, keepdim=True)
+                merged_block = merged_vec.expand(-1, 64, -1)
+                hidden_states = torch.cat([kept_hidden, merged_block], dim=1)
+                q_len_now += 64
+                idx = torch.cat([idx, merge_idx], dim=0)
+            else:
+                hidden_states = hidden_states[:, idx, :]
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
