@@ -42,7 +42,7 @@ log()  { printf "\n[run_pod] %s\n" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 log "Verifying NVIDIA driver and CUDA visible"
-nvidia-smi | head -n 5
+nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
 python -c "import sys; print('python', sys.version)"
 
 if [ ! -d "$REPO_DIR/.git" ]; then
