@@ -35,7 +35,6 @@ from jenga.models.predictor import AttnPredictor1, CNNAttnPredictor
 
 POOL_SIZE = 64
 HIDDEN_DIM = 128
-TARGET_LAYERS = list(range(0, 32, 2))  # 16 evenly spaced Llama 2 layers
 
 
 def seed_everything(seed: int):
@@ -69,6 +68,9 @@ def build_cache(model_path: str, seq_len: int, n_docs: int, out_dir: str, device
     model = AutoModelForCausalLM.from_pretrained(
         model_path, torch_dtype=torch.bfloat16, config=config
     ).to(device).eval()
+    num_layers = config.num_hidden_layers
+    target_layers = list(range(0, num_layers, 2))
+    print(f"[cache] target layers (every other of {num_layers}): {target_layers}", flush=True)
 
     ds = load_dataset("./dataset/RedPajama-Data-1T-Sample", trust_remote_code=True)["train"]
     head = ds.select(range(min(n_docs * 4, len(ds))))
@@ -91,7 +93,7 @@ def build_cache(model_path: str, seq_len: int, n_docs: int, out_dir: str, device
             out = model(ids, output_hidden_states=True, output_attentions=True, return_dict=True)
         hs = out.hidden_states
         attns = out.attentions
-        for layer_idx in TARGET_LAYERS:
+        for layer_idx in target_layers:
             h_in = hs[layer_idx]
             attn = attns[layer_idx]
             num_blocks = seq_len // POOL_SIZE
@@ -154,8 +156,8 @@ def train_predictor(predictor_type: str, cache_file: Path, epochs: int, lr: floa
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model_path", default="checkpoints/llama2")
-    parser.add_argument("--seq_len", type=int, default=4096)
+    parser.add_argument("--model_path", default="checkpoints/opt-1.3b")
+    parser.add_argument("--seq_len", type=int, default=2048)
     parser.add_argument("--n_docs", type=int, default=4)
     parser.add_argument("--epochs", type=int, default=200)
     parser.add_argument("--lr", type=float, default=1e-3)
@@ -169,8 +171,10 @@ def main():
 
     cache_file = build_cache(args.model_path, args.seq_len, args.n_docs, str(out_dir / "cache"), device)
     data = torch.load(cache_file, map_location="cpu")
-    head_dim = data["hidden"].size(-1) // 32  # Llama 2 7B has 32 heads
-    n_head = data["hidden"].size(-1) // head_dim
+    from transformers import AutoConfig
+    model_cfg = AutoConfig.from_pretrained(args.model_path)
+    n_head = getattr(model_cfg, "num_attention_heads", 32)
+    head_dim = data["hidden"].size(-1) // n_head
 
     csv_path = out_dir / "loss.csv"
     write_header = not csv_path.exists()
