@@ -59,13 +59,15 @@ ensure_bin() {
   fi
 }
 
-# torch 2.1.2 requires Python 3.8 to 3.11. If the system python is outside that
-# range, fall back to a conda env on Python 3.10 (the artifact's tested version).
+# flash-attn 2.5.6's prebuilt wheel is cp310 only. We pin to system Python
+# 3.10 when present, otherwise force a Python 3.10 conda env. Python 3.11
+# was previously accepted here, but its lack of a flash-attn wheel caused
+# the source build path to be selected, which then failed.
 PYVER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "")
 ENV_BIN=""
 case "$PYVER" in
-  3.8|3.9|3.10|3.11)
-    log "System python $PYVER is compatible with torch 2.1.2"
+  3.8|3.9|3.10)
+    log "System python $PYVER is compatible with the flash-attn cp310 wheel"
     ensure_bin python python3
     ensure_bin pip pip3
     ;;
