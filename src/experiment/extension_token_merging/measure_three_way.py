@@ -62,10 +62,14 @@ def build_model(base_model, predictor_path, peft_model, seq_len, device):
     return model, tokenizer, inner_cfg
 
 
-def load_texts(seq_len, n_docs):
+def load_texts(seq_len, n_docs, start_index=1000):
+    # Held out evaluation. Training drivers select range(1000); we pick
+    # documents from index 1000 onward so the retrained adapter is not
+    # measured on its own training set.
     ds = load_dataset("./dataset/RedPajama-Data-1T-Sample", trust_remote_code=True)["train"]
     texts = []
-    for row in ds.select(range(min(n_docs * 8, len(ds)))):
+    end = min(start_index + n_docs * 8, len(ds))
+    for row in ds.select(range(start_index, end)):
         if len(texts) >= n_docs:
             break
         if len(row["text"]) > seq_len * 4:
