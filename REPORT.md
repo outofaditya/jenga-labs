@@ -198,19 +198,23 @@ The **token merging effect on the retrained adapter** is the comparison of rows 
 
 The peak memory column is essentially flat across all four rows. The mean forward time is faster for the merged rows by approximately 0.1 s, a 12 percent reduction that we attribute to a combination of measurement noise and the fact that the merged forward path emits a slightly different control flow into flash attention's varlen kernel; the precise mechanism is not isolated by this experiment.
 
-Peak GPU memory is within 1.5 MB across the four configurations and mean forward wall clock is within noise of one another; both are reported in the table of Section 6.1 and not separately plotted.
+Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
 
-![Mean forward loss across the 2x2 design](output_figures/extensions/token_merging/loss.pdf)
+![Mean forward loss across the three states](output_figures/extensions/token_merging/loss.pdf)
 
-*Figure 7. Mean forward loss across the 2×2 design. Each adapter is evaluated under both hard drop and token merging; bars are grouped by adapter, colored by mode. The contrast between bars within the Original adapter group shows the catastrophic inference time mismatch; the contrast within the Retrained group shows the soft elimination contribution at fixed adapter quality.*
+*Figure 7. Mean forward loss across the three states on four held out RedPajama documents at 8 K context.*
 
-![Approximate perplexity across the 2x2 design](output_figures/extensions/token_merging/ppl.pdf)
+![Approximate perplexity across the three states](output_figures/extensions/token_merging/ppl.pdf)
 
-*Figure 8. Approximate perplexity (exp of mean forward loss) across the same 2×2 design. The y axis is dominated by the original adapter under merging because that configuration is broken; the three remaining bars are an order of magnitude smaller.*
+*Figure 8. Approximate perplexity (exp of mean forward loss) across the three states. The middle bar dominates the axis because that configuration is broken; the other two are an order of magnitude smaller.*
+
+![Peak GPU memory across the three states](output_figures/extensions/token_merging/memory.pdf)
+
+*Figure 9. Peak GPU memory in GB across the three states. The three bars are within 1.5 MB of one another; the y axis is in GB and the differences are not visually distinguishable.*
 
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
 
-*Figure 9. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+*Figure 10. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
 
 ## 7. Discussion
 
