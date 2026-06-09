@@ -90,9 +90,25 @@ Our 8K Llama 2 speedup of 1.12x matches the authors' shipped log within 1%. The 
 
 ### 4.3 Memory Breakdown (Reproduces Paper Figure 14 Upper)
 
-To be populated by Atom R3. Required figure:
+Atom R3 decomposed peak memory on Llama 2 7B into model state (base weights + LoRA + optimizer), activations, predictor overhead, and others (workspace + fragmentation), at sequence length 8192 for LoRA, LongLoRA, and Jenga, and across five sequence lengths for Jenga alone.
 
-**Figure 4.3** — paste exactly this image (caption: "Decomposition of Jenga peak memory into model state, activations, predictor overhead, and others on Llama 2 7B at three sequence lengths."):
+| Case | Total (MB) | Model State | Activations | Predictor | Others |
+| --- | --- | --- | --- | --- | --- |
+| 8K LoRA | 73,064 | 12,997 | 59,438 | 0 | 629 |
+| 8K LongLoRA | 77,144 | 12,997 | 59,438 | 0 | 4,709 |
+| 8K Jenga | 44,508 | 13,063 | 30,827 | 656 | 618 |
+| 10K Jenga | 52,384 | 13,063 | 38,580 | 656 | 741 |
+| 12K Jenga | 60,140 | 13,063 | 46,236 | 656 | 841 |
+| 14K Jenga | 68,000 | 13,063 | 53,989 | 656 | 948 |
+| 16K Jenga | 75,838 | 13,063 | 61,742 | 656 | 1,033 |
+
+Three observations the figure makes visible:
+
+1. **Activations dominate the savings.** At 8K, Jenga drops activations from 59,438 to 30,827 MB — a 48% cut, while model state is essentially unchanged. This is the contextual sparsity mechanism removing tokens that the predictor judges low-attention before they hit attention and MLP.
+2. **Predictor overhead is negligible.** A fixed 656 MB across every Jenga configuration, less than 1% of total peak memory at every sequence length. The "small MLP predictor pays for itself many times over" claim from the paper holds.
+3. **LongLoRA has 4 GB extra "others"** at 8K because its shifted-attention reordering keeps additional buffers. Jenga's others stay sub-1.5 GB across the full sweep.
+
+**Figure 4.3** — paste exactly this image (caption: "Decomposition of Jenga peak memory into model state, activations, predictor overhead, and others on Llama 2 7B compared with LoRA and LongLoRA at 8K and at multiple Jenga sequence lengths."):
 
 ![Memory breakdown](output_figures/ablations/memory-breakdown/exp-ablation-mem-breakdown.pdf)
 

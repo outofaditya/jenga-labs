@@ -77,7 +77,7 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | S4 | Setup | 0.2 | 0.20 | done (baseline 13.18 GB jenga 7.28 GB; pod preempted mid aggregation but logs synced) |
 | R1 | Reproduction | 1.5 | 1.50 | done (12 configs llama2 + opt-1.3b at 4K and 8K; jenga 31 to 39 percent below LoRA matches paper within ~1%) |
 | R2 | Reproduction | 1.5 | 1.50 | done (12 configs; jenga 1.04 to 1.12x faster than LoRA matches paper) |
-| R3 | Reproduction | 0.5 | 0.50 | pending |
+| R3 | Reproduction | 0.5 | 0.50 | done (memory breakdown across 8K LoRA + LongLoRA + Jenga at 8K to 16K; predictor overhead 656 MB constant) |
 | R4 | Reproduction | 0.2 | 0.20 | pending |
 | R5 | Reproduction | 2.0 | 2.00 | pending |
 | R6 | Reproduction (optional) | 0.2 | 0.20 | pending |
