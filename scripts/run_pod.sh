@@ -150,7 +150,7 @@ required=(
   "checkpoints/predictor/predictor.pth"
   "checkpoints/predictor/pruned_config.pth"
   "dataset/PPL/proof_pile.bin"
-  "dataset/PPL/pg.bin"
+  "dataset/PPL/test_pg19.bin"
 )
 if [ "$INCLUDE_LLAMA2" = "1" ]; then required+=("checkpoints/llama2/config.json"); fi
 if [ "$INCLUDE_OPT_350M" = "1" ]; then required+=("checkpoints/opt-350m/config.json"); fi

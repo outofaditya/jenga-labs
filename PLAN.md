@@ -335,11 +335,11 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 ### Atom R5: Table 7 Perplexity on Paper Benchmarks
 
-**Purpose.** Reproduce the paper's Table 7 perplexity comparison of LoRA versus Jenga on the paper's own `proof_pile.bin` and `pg.bin` files at a budget feasible subset of configurations.
+**Purpose.** Reproduce the paper's Table 7 perplexity comparison of LoRA versus Jenga on the paper's own `proof_pile.bin` and `test_pg19.bin` files at a budget feasible subset of configurations.
 
 **Depends On.** R4.
 
-**Inputs.** `dataset/PPL/proof_pile.bin` and `dataset/PPL/pg.bin`. Llama 2 7B baseline LoRA adapter from `checkpoints/peft_model/la/lora/` and Jenga LoRA adapter from `checkpoints/peft_model/la/jenga/`. Sequence lengths 8192 and 16384. Three seeds per configuration.
+**Inputs.** `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. Llama 2 7B baseline LoRA adapter from `checkpoints/peft_model/la/lora/` and Jenga LoRA adapter from `checkpoints/peft_model/la/jenga/`. Sequence lengths 8192 and 16384. Three seeds per configuration.
 
 **Steps.**
 
@@ -427,7 +427,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 3. Compute `t_dynamic = t_base + lam * (1 - entropy_norm)` and use it in place of the static threshold.
 4. Add a CLI argument `--dynamic_threshold_lambda` to `src/experiment/end2end/time/llama_jenga.py` and surface it via a new shell wrapper `scripts/extension-adaptive/run.sh <lam>`.
 5. Retrain a Jenga baseline (static threshold) under exactly the same training budget that the adaptive runs will use. This is the fair comparison baseline.
-6. For each `lam in {0.05, 0.1, 0.2}` and each seed in `{0, 1, 2}` run the adaptive driver until the training budget cap is hit. Log retention ratio per layer per batch and final PPL on `proof_pile.bin` and `pg.bin`.
+6. For each `lam in {0.05, 0.1, 0.2}` and each seed in `{0, 1, 2}` run the adaptive driver until the training budget cap is hit. Log retention ratio per layer per batch and final PPL on `proof_pile.bin` and `test_pg19.bin`.
 7. Plot the entropy versus retention scatter and the PPL bar chart.
 
 **Outputs.**
