@@ -127,7 +127,7 @@ def main():
                     continue
                 jmm._ADAPTIVE_STATS = []
                 with torch.no_grad():
-                    _ = model(ids)
+                    _ = model(input_ids=ids, labels=ids)
                 stats = list(jmm._ADAPTIVE_STATS)
                 for s in stats:
                     w.writerow([lam, doc_idx, s["layer"], s["entropy_norm"], s["retention"], s["q_len_orig"]])
