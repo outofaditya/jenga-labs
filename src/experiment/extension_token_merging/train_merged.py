@@ -15,10 +15,9 @@ import torch
 import transformers
 from datasets import DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model
-from transformers import AutoTokenizer, DataCollatorForLanguageModeling
+from transformers import AutoTokenizer, DataCollatorForLanguageModeling, Trainer
 
 from jenga.models.modeling_llama import LlamaForCausalLM
-from jenga.trainer.time_profile import Trainer
 from jenga.utils.config_utils import get_llama_qk
 from jenga.utils.others import (seed_everything,
                                 smart_tokenizer_and_embedding_resize)
@@ -89,8 +88,7 @@ def train():
     config.merge_eliminated = True
     config.dynamic_threshold_lambda = 0.0
     config.log_adaptive = False
-    # Step level wall clock logging from the time profile trainer is fine.
-    config.time = True
+    config.time = False
 
     pruned_cfg = torch.load(os.path.join(model_args.predictor_path, "pruned_config.pth"))
     config.predictor_layers = pruned_cfg["layers"]
