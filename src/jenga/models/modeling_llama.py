@@ -597,10 +597,11 @@ class LlamaFlashAttention2(LlamaAttention):
                 if merge_eliminated:
                     drop_token_idx = (dropped_block_idx[:, None] * 64 +
                                        torch.arange(64, device=idx_blocks.device).view(1, 64)).view(-1)
-                    # One merged token at a unique synthetic position past the
-                    # original sequence so flash attn varlen does not treat
-                    # repeated positions as zero length batch segments.
-                    merged_pos = int(num_blocks_total * 64) + int(self.layer_idx)
+                    # One merged token at the mean position of the dropped
+                    # tokens. Single token so no flash attn varlen confusion
+                    # over repeated positions; position is in-range so cos/sin
+                    # indexing stays valid.
+                    merged_pos = int(drop_token_idx.float().mean().item())
                     merge_idx = torch.tensor([merged_pos], device=idx.device, dtype=idx.dtype)
                 del sum_q, hidden_states_
 
