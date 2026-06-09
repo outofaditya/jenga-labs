@@ -23,7 +23,7 @@
 # Usage on the pod:
 #   export HF_TOKEN=hf_...
 #   export HF_MIRROR_REPO=<your_username>/jenga-labs-artifacts
-#   bash scripts/setup_pod.sh
+#   bash scripts/run_pod.sh
 
 set -euo pipefail
 
@@ -38,7 +38,7 @@ INCLUDE_OPT_1_3B="${INCLUDE_OPT_1_3B:-1}"
 INCLUDE_OPT_2_7B="${INCLUDE_OPT_2_7B:-0}"
 INCLUDE_OPT_6_7B="${INCLUDE_OPT_6_7B:-0}"
 
-log()  { printf "\n[setup_pod] %s\n" "$*"; }
+log()  { printf "\n[run_pod] %s\n" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 log "Verifying NVIDIA driver and CUDA visible"
@@ -166,7 +166,7 @@ for f in "${required[@]}"; do
   fi
 done
 if [ "$missing" -gt 0 ]; then
-  echo "[setup_pod] $missing required file(s) missing; aborting"
+  echo "[run_pod] $missing required file(s) missing; aborting"
   exit 1
 fi
 

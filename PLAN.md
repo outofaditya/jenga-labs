@@ -122,7 +122,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
    export HF_MIRROR_REPO=<your_username>/jenga-labs-artifacts
    ```
 
-8. Run `bash scripts/setup_pod.sh`. The script is idempotent. It installs `requirements.txt`, `flash-attn`, and the editable `jenga` package, pulls the pre extracted artifacts from your HF mirror, pulls the base models, and verifies the Atom S1 success criteria. Optional base model downloads are gated by `INCLUDE_*` env vars documented at the top of the script.
+8. Run `bash scripts/run_pod.sh`. The script is idempotent. It installs `requirements.txt`, `flash-attn`, and the editable `jenga` package, pulls the pre extracted artifacts from your HF mirror, pulls the base models, and verifies the Atom S1 success criteria. Optional base model downloads are gated by `INCLUDE_*` env vars documented at the top of the script.
 9. Snapshot the pod image so future pods skip the bootstrap entirely.
 
 **Outputs.** A pod whose `checkpoints/` and `dataset/` trees match the layout described in `README.md`. A snapshot ID recorded in `REPORT.md` Appendix B.
@@ -132,7 +132,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 * `python -c "import torch; print(torch.cuda.is_available())"` prints `True`.
 * `python -c "import flash_attn; import jenga"` exits with code zero.
 * `ls checkpoints/llama2/config.json`, `ls checkpoints/predictor/predictor.pth`, and `ls dataset/PPL/proof_pile.bin` all exist.
-* `scripts/setup_pod.sh` exits with code zero.
+* `scripts/run_pod.sh` exits with code zero.
 
 **Report Update.** Appendix B Software Environment is populated with the pin list and the snapshot ID.
 
