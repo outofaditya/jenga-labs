@@ -82,10 +82,10 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R5 | Reproduction | 2.0 | 2.00 | done (6 of 6 trimmed scope; Jenga 2 to 5 percent higher PPL than LoRA at 4x memory) |
 | R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
-| I1 | Improvement | 3.0 | 3.00 | done (mechanism check; 64 layer batch points per lam in 0 0.05 0.1 0.2; downstream PPL deferred to I3) |
-| I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B RedPajama) |
+| I1 | Improvement | 3.0 | 3.00 | done (mechanism verified; downstream PPL not measurable with the artifact's dense PPL tool; demoted to "other approaches" paragraph) |
+| I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B; demoted to "other approaches" paragraph) |
 | I3 | Improvement | 0.5 | 0.50 | done (positive: 0.4 percent lower loss at near zero memory overhead, naive inference only) |
-| I4 | Improvement | 0.7 | 0.70 | pending (joint train LoRA with merge_eliminated true then re-evaluate) |
+| I4 | Improvement | 0.7 | 0.70 | in progress (joint train LoRA with merge_eliminated true then re-evaluate) |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |
 | Buffer | reserve | 3.8 | 3.80 | reserve |
@@ -519,6 +519,66 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 **Report Update.** Section 5.2 gains the implementation description. Section 6.2 gains the loss curve PDF and a paragraph on convergence speed and final asymptotic MSE comparison.
 
 **Budget.** Two hours. Estimate 2 hours.
+
+### Atom I3: Token Merging at Inference Only
+
+**Purpose.** Test whether replacing Jenga's hard elimination with a single mean pooled summary token per sparse layer improves forward loss at inference time on the authors' existing Jenga LoRA adapter.
+
+**Depends On.** R5 (to have the predictor and the original Jenga adapter on disk).
+
+**Inputs.** `src/jenga/models/modeling_llama.py` (the attention forward path that selects the top `config.sparse` fraction of blocks). The authors' Jenga LoRA adapter at `checkpoints/peft_model/rp/8k/jenga/`. Four held out RedPajama documents at 8 K context.
+
+**Steps.**
+
+1. Add a `config.merge_eliminated` flag to the Jenga forward and gate the modification on it. The original hard drop path remains byte identical when the flag is False.
+2. When the flag is True at layers index 15 onward, compute the dropped block indices, gather the dropped token hidden states from the pre drop layer input, mean pool to a single hidden dimensional vector, and append it to the kept sequence at the position of the last kept token.
+3. Reconstruct the layer output by scattering the kept tokens back to their original positions and broadcasting the merged token's attention output onto every dropped position so the residual stream carries a non zero representation across the dropped portion of the sequence.
+4. Build `src/experiment/extension_token_merging/measure_merge.py` to load the same model twice with the flag toggled and measure mean loss, peak memory, and mean forward time on the same four documents.
+5. Plot the result as a three column bar chart placed in `output_figures/extensions/token_merging/`.
+
+**Outputs.**
+
+* `logs/extensions/token_merging/comparison.csv` columns `mode,n_docs,mean_loss,ppl_approx,peak_memory_mb,mean_forward_s`.
+* `output_figures/extensions/token_merging/bar.pdf`.
+
+**Success Criteria.**
+
+* The flag gates the new behavior exactly; with the flag False the numbers match the original Jenga.
+* The merged variant matches or improves the hard drop on mean loss without regressing on memory or wall clock.
+
+**Report Update.** Section 5 introduces the design and Section 6.1 receives the comparison table.
+
+**Budget.** Inference only on the existing adapter. Estimate 0.5 hours.
+
+### Atom I4: Joint Training with Token Merging Enabled
+
+**Purpose.** Train a new LoRA adapter with `config.merge_eliminated = True` from the first optimizer step and compare against both the original Jenga adapter and the Section 6.1 inference time merging row to test whether jointly adapting the LoRA weights to the merged representation amplifies the inference time effect.
+
+**Depends On.** I3.
+
+**Inputs.** `src/experiment/extension_token_merging/train_merged.py` cloned from the end to end time driver, modified to set `config.merge_eliminated = True` after `get_llama_qk` and to write the adapter to `checkpoints/peft_model_merged/`. RedPajama subset of 1,000 documents. Llama 2 7B.
+
+**Steps.**
+
+1. Clone the end to end time driver, drop the `time_profile.Trainer` import in favor of the stock `transformers.Trainer` (the time profile trainer exits at step three by design), and set `config.merge_eliminated = True` before the model is constructed.
+2. Train for 500 steps with the same hyperparameters as the authors' Jenga LoRA: r = 8, alpha = 16, target modules q_proj, k_proj, v_proj, o_proj, AdamW with fp32 optimizer state, bf16, batch size one, learning rate 2e-5, 20 step constant with warmup schedule, gradient checkpointing on.
+3. Re run `measure_merge.py` with `--peft_model checkpoints/peft_model_merged/`.
+4. Update the three row comparison table.
+
+**Outputs.**
+
+* `checkpoints/peft_model_merged/` directory with the trained LoRA weights and tokenizer state.
+* The third row of `logs/extensions/token_merging/comparison.csv` populated.
+* Updated `output_figures/extensions/token_merging/bar.pdf` with the third configuration.
+
+**Success Criteria.**
+
+* Training completes 500 steps without NaN loss or OOM on the chosen GPU.
+* The retrained adapter is evaluated on the same four documents under the same protocol as Section 6.1.
+
+**Report Update.** Section 6.2 third row populated; the discussion paragraph in Section 7 reads the joint training row against the inference time row.
+
+**Budget.** Estimate 0.7 hours.
 
 ---
 
