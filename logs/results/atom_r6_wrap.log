@@ -1,0 +1,285 @@
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+The cache for model files in Transformers v4.22.0 has been updated. Migrating your old cache. This is a one-time only operation. You can interrupt this and resume the migration later on by calling `transformers.utils.move_cache()`.
+0it [00:00, ?it/s]0it [00:00, ?it/s]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:215: UserWarning: 
+NVIDIA RTX PRO 5000 Blackwell with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90.
+If you want to use the NVIDIA RTX PRO 5000 Blackwell GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:04<00:04,  4.16s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:05<00:00,  2.44s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:05<00:00,  2.70s/it]
+Generating train split: 0 examples [00:00, ? examples/s]Generating train split: 391 examples [00:00, 3892.59 examples/s]Generating train split: 969 examples [00:00, 3835.88 examples/s]Generating train split: 1456 examples [00:00, 2457.13 examples/s]Generating train split: 1744 examples [00:00, 1532.30 examples/s]Generating train split: 2000 examples [00:01, 1015.04 examples/s]Generating train split: 4088 examples [00:01, 3531.29 examples/s]Generating train split: 6679 examples [00:01, 6968.48 examples/s]Generating train split: 9058 examples [00:01, 9994.54 examples/s]Generating train split: 11653 examples [00:01, 13255.75 examples/s]Generating train split: 14182 examples [00:01, 15974.69 examples/s]Generating train split: 16861 examples [00:02, 18613.57 examples/s]Generating train split: 19420 examples [00:02, 20416.17 examples/s]Generating train split: 22000 examples [00:02, 21733.35 examples/s]Generating train split: 24580 examples [00:02, 22858.05 examples/s]Generating train split: 27064 examples [00:02, 23417.26 examples/s]Generating train split: 29625 examples [00:02, 24035.58 examples/s]Generating train split: 33353 examples [00:02, 24344.61 examples/s]Generating train split: 36000 examples [00:02, 24683.95 examples/s]Generating train split: 38601 examples [00:02, 25045.41 examples/s]Generating train split: 42401 examples [00:03, 25150.41 examples/s]Generating train split: 44961 examples [00:03, 25187.05 examples/s]Generating train split: 47523 examples [00:03, 25300.84 examples/s]Generating train split: 50081 examples [00:03, 25376.77 examples/s]Generating train split: 52752 examples [00:03, 25755.15 examples/s]Generating train split: 56707 examples [00:03, 25794.68 examples/s]Generating train split: 59345 examples [00:03, 25665.48 examples/s]Generating train split: 61979 examples [00:03, 25847.44 examples/s]Generating train split: 65653 examples [00:03, 25345.84 examples/s]Generating train split: 68364 examples [00:04, 25448.11 examples/s]Generating train split: 70996 examples [00:04, 25678.82 examples/s]Generating train split: 74872 examples [00:04, 25732.25 examples/s]Generating train split: 78715 examples [00:04, 25690.60 examples/s]Generating train split: 81309 examples [00:04, 25536.01 examples/s]Generating train split: 84000 examples [00:04, 25212.06 examples/s]Generating train split: 86674 examples [00:04, 25613.55 examples/s]Generating train split: 90487 examples [00:04, 25539.61 examples/s]Generating train split: 94317 examples [00:05, 25432.97 examples/s]Generating train split: 97000 examples [00:05, 25529.83 examples/s]Generating train split: 99706 examples [00:05, 25919.61 examples/s]Generating train split: 102374 examples [00:05, 25905.68 examples/s]Generating train split: 106096 examples [00:05, 25503.03 examples/s]Generating train split: 108771 examples [00:05, 25822.10 examples/s]Generating train split: 112669 examples [00:05, 25739.75 examples/s]Generating train split: 115342 examples [00:05, 25707.66 examples/s]Generating train split: 118000 examples [00:05, 25755.96 examples/s]Generating train split: 120632 examples [00:06, 25907.02 examples/s]Generating train split: 124264 examples [00:06, 25280.98 examples/s]Generating train split: 126909 examples [00:06, 25580.13 examples/s]Generating train split: 130701 examples [00:06, 25470.59 examples/s]Generating train split: 134619 examples [00:06, 25453.58 examples/s]Generating train split: 138519 examples [00:06, 25628.99 examples/s]Generating train split: 142411 examples [00:06, 25725.86 examples/s]Generating train split: 146095 examples [00:07, 25360.95 examples/s]Generating train split: 148766 examples [00:07, 25665.91 examples/s]Generating train split: 152653 examples [00:07, 25590.78 examples/s]Generating train split: 156487 examples [00:07, 25578.36 examples/s]Generating train split: 160349 examples [00:07, 25619.89 examples/s]Generating train split: 163000 examples [00:07, 25600.27 examples/s]Generating train split: 166903 examples [00:07, 25735.84 examples/s]Generating train split: 170712 examples [00:08, 25625.41 examples/s]Generating train split: 173314 examples [00:08, 25424.90 examples/s]Generating train split: 175907 examples [00:08, 25549.77 examples/s]Generating train split: 179654 examples [00:08, 25349.53 examples/s]Generating train split: 183504 examples [00:08, 25449.53 examples/s]Generating train split: 187181 examples [00:08, 25145.86 examples/s]Generating train split: 189846 examples [00:08, 25497.40 examples/s]Generating train split: 193731 examples [00:08, 25628.05 examples/s]Generating train split: 196341 examples [00:09, 25522.65 examples/s]Generating train split: 199000 examples [00:09, 25447.64 examples/s]Generating train split: 201703 examples [00:09, 25864.06 examples/s]Generating train split: 204339 examples [00:09, 25713.04 examples/s]Generating train split: 208000 examples [00:09, 25192.52 examples/s]Generating train split: 210655 examples [00:09, 25541.21 examples/s]Generating train split: 214428 examples [00:09, 25400.56 examples/s]Generating train split: 217000 examples [00:09, 25398.79 examples/s]Generating train split: 219700 examples [00:09, 25821.46 examples/s]Generating train split: 223644 examples [00:10, 25628.36 examples/s]Generating train split: 227309 examples [00:10, 25216.65 examples/s]Generating train split: 229967 examples [00:10, 25546.12 examples/s]Generating train split: 233861 examples [00:10, 25684.99 examples/s]Generating train split: 237699 examples [00:10, 25649.11 examples/s]Generating train split: 241495 examples [00:10, 25537.67 examples/s]Generating train split: 245175 examples [00:10, 25213.82 examples/s]Generating train split: 247753 examples [00:11, 25343.30 examples/s]Generating train split: 250303 examples [00:11, 25105.60 examples/s]Generating train split: 252885 examples [00:11, 25286.97 examples/s]Generating train split: 256619 examples [00:11, 25132.68 examples/s]Generating train split: 259157 examples [00:11, 25192.63 examples/s]Generating train split: 261773 examples [00:11, 25443.54 examples/s]Generating train split: 264331 examples [00:11, 25399.32 examples/s]Generating train split: 268000 examples [00:11, 24864.41 examples/s]Generating train split: 270690 examples [00:11, 25387.67 examples/s]Generating train split: 273339 examples [00:12, 25389.40 examples/s]Generating train split: 275985 examples [00:12, 25683.33 examples/s]Generating train split: 279818 examples [00:12, 25631.13 examples/s]Generating train split: 283720 examples [00:12, 25759.27 examples/s]Generating train split: 287368 examples [00:12, 25281.06 examples/s]Generating train split: 290000 examples [00:12, 25291.12 examples/s]Generating train split: 292593 examples [00:12, 25449.43 examples/s]Generating train split: 296382 examples [00:12, 25378.97 examples/s]Generating train split: 299000 examples [00:13, 25289.66 examples/s]Generating train split: 301674 examples [00:13, 25667.16 examples/s]Generating train split: 304339 examples [00:13, 25554.56 examples/s]Generating train split: 308070 examples [00:13, 25303.22 examples/s]Generating train split: 310690 examples [00:13, 25530.89 examples/s]Generating train split: 314426 examples [00:13, 25307.74 examples/s]Generating train split: 317000 examples [00:13, 25245.93 examples/s]Generating train split: 319651 examples [00:13, 25578.14 examples/s]Generating train split: 323418 examples [00:14, 25406.99 examples/s]Generating train split: 327041 examples [00:14, 24977.12 examples/s]Generating train split: 329662 examples [00:14, 25277.04 examples/s]Generating train split: 333424 examples [00:14, 25206.79 examples/s]Generating train split: 336000 examples [00:14, 25020.05 examples/s]Generating train split: 338636 examples [00:14, 25362.91 examples/s]Generating train split: 342402 examples [00:14, 25267.57 examples/s]Generating train split: 346032 examples [00:14, 24904.11 examples/s]Generating train split: 348675 examples [00:15, 25273.97 examples/s]Generating train split: 352523 examples [00:15, 25400.72 examples/s]Generating train split: 356348 examples [00:15, 25427.35 examples/s]Generating train split: 358945 examples [00:15, 25555.05 examples/s]Generating train split: 362696 examples [00:15, 25366.86 examples/s]Generating train split: 365337 examples [00:15, 24963.96 examples/s]Generating train split: 368110 examples [00:15, 20315.42 examples/s]Generating train split: 370745 examples [00:16, 17248.34 examples/s]Generating train split: 373061 examples [00:16, 15303.13 examples/s]Generating train split: 374997 examples [00:16, 14666.48 examples/s]Generating train split: 376851 examples [00:16, 14032.56 examples/s]Generating train split: 378769 examples [00:16, 13294.97 examples/s]Generating train split: 380769 examples [00:16, 12897.91 examples/s]Generating train split: 382773 examples [00:17, 12758.61 examples/s]Generating train split: 384703 examples [00:17, 12358.46 examples/s]Generating train split: 385960 examples [00:17, 12388.58 examples/s]Generating train split: 387775 examples [00:17, 12179.88 examples/s]Generating train split: 389728 examples [00:17, 12146.96 examples/s]Generating train split: 391000 examples [00:17, 11926.14 examples/s]Generating train split: 392349 examples [00:17, 12289.20 examples/s]Generating train split: 393622 examples [00:18, 12061.50 examples/s]Generating train split: 394857 examples [00:18, 12132.46 examples/s]Generating train split: 396752 examples [00:18, 11933.83 examples/s]Generating train split: 398000 examples [00:18, 11565.66 examples/s]Generating train split: 399233 examples [00:18, 11742.62 examples/s]Generating train split: 400416 examples [00:18, 11764.24 examples/s]Generating train split: 401758 examples [00:18, 12065.85 examples/s]Generating train split: 403402 examples [00:18, 11645.96 examples/s]Generating train split: 404766 examples [00:18, 12047.07 examples/s]Generating train split: 406446 examples [00:19, 11734.33 examples/s]Generating train split: 407761 examples [00:19, 12084.66 examples/s]Generating train split: 409000 examples [00:19, 11768.86 examples/s]Generating train split: 410247 examples [00:19, 11943.21 examples/s]Generating train split: 411764 examples [00:19, 12271.34 examples/s]Generating train split: 413265 examples [00:19, 11399.29 examples/s]Generating train split: 414792 examples [00:19, 11870.26 examples/s]Generating train split: 416000 examples [00:19, 11457.54 examples/s]Generating train split: 417171 examples [00:20, 11520.00 examples/s]Generating train split: 419000 examples [00:20, 11401.42 examples/s]Generating train split: 420254 examples [00:20, 11683.17 examples/s]Generating train split: 421780 examples [00:20, 11913.68 examples/s]Generating train split: 423000 examples [00:20, 11535.45 examples/s]Generating train split: 424299 examples [00:20, 11919.23 examples/s]Generating train split: 425750 examples [00:20, 12224.29 examples/s]Generating train split: 426996 examples [00:20, 12285.01 examples/s]Generating train split: 428795 examples [00:20, 12173.66 examples/s]Generating train split: 430796 examples [00:21, 12234.70 examples/s]Generating train split: 432655 examples [00:21, 11919.08 examples/s]Generating train split: 433907 examples [00:21, 12056.51 examples/s]Generating train split: 435702 examples [00:21, 11993.51 examples/s]Generating train split: 437236 examples [00:21, 11424.64 examples/s]Generating train split: 438687 examples [00:21, 11712.11 examples/s]Generating train split: 439925 examples [00:21, 11871.95 examples/s]Generating train split: 441709 examples [00:22, 11870.85 examples/s]Generating train split: 442923 examples [00:22, 11935.65 examples/s]Generating train split: 444756 examples [00:22, 11767.14 examples/s]Generating train split: 446000 examples [00:22, 11612.01 examples/s]Generating train split: 447878 examples [00:22, 11915.12 examples/s]Generating train split: 449755 examples [00:22, 11657.43 examples/s]Generating train split: 450962 examples [00:22, 11751.02 examples/s]Generating train split: 452740 examples [00:23, 11541.52 examples/s]Generating train split: 454344 examples [00:23, 11265.17 examples/s]Generating train split: 455719 examples [00:23, 11452.00 examples/s]Generating train split: 456897 examples [00:23, 11529.15 examples/s]Generating train split: 458714 examples [00:23, 11454.26 examples/s]Generating train split: 459959 examples [00:23, 11693.59 examples/s]Generating train split: 461735 examples [00:23, 11177.71 examples/s]Generating train split: 462949 examples [00:23, 11402.22 examples/s]Generating train split: 464651 examples [00:24, 11096.05 examples/s]Generating train split: 466128 examples [00:24, 10594.64 examples/s]Generating train split: 467246 examples [00:24, 10729.03 examples/s]Generating train split: 468392 examples [00:24, 10906.66 examples/s]Generating train split: 469707 examples [00:24, 11142.89 examples/s]Generating train split: 470867 examples [00:24, 11260.46 examples/s]Generating train split: 472382 examples [00:24, 10825.68 examples/s]Generating train split: 473749 examples [00:24, 11171.83 examples/s]Generating train split: 474936 examples [00:25, 11350.25 examples/s]Generating train split: 476728 examples [00:25, 11301.73 examples/s]Generating train split: 477921 examples [00:25, 11457.90 examples/s]Generating train split: 479695 examples [00:25, 11298.31 examples/s]Generating train split: 481000 examples [00:25, 10288.25 examples/s]Generating train split: 482089 examples [00:25, 10429.40 examples/s]Generating train split: 483277 examples [00:25, 10791.38 examples/s]Generating train split: 485000 examples [00:25, 10678.89 examples/s]Generating train split: 486129 examples [00:26, 10825.19 examples/s]Generating train split: 487348 examples [00:26, 11176.01 examples/s]Generating train split: 489000 examples [00:26, 10768.11 examples/s]Generating train split: 490156 examples [00:26, 10956.39 examples/s]Generating train split: 491324 examples [00:26, 11143.64 examples/s]Generating train split: 492695 examples [00:26, 11142.67 examples/s]Generating train split: 494285 examples [00:26, 10947.34 examples/s]Generating train split: 495691 examples [00:26, 11235.37 examples/s]Generating train split: 496824 examples [00:27, 11237.78 examples/s]Generating train split: 497971 examples [00:27, 11297.56 examples/s]Generating train split: 499713 examples [00:27, 10977.56 examples/s]Generating train split: 500899 examples [00:27, 11191.71 examples/s]Generating train split: 502710 examples [00:27, 11046.30 examples/s]Generating train split: 503843 examples [00:27, 11113.10 examples/s]Generating train split: 505331 examples [00:27, 10702.49 examples/s]Generating train split: 506724 examples [00:27, 11057.51 examples/s]Generating train split: 507906 examples [00:28, 11248.35 examples/s]Generating train split: 509475 examples [00:28, 10966.42 examples/s]Generating train split: 510692 examples [00:28, 11136.93 examples/s]Generating train split: 511887 examples [00:28, 11337.19 examples/s]Generating train split: 513673 examples [00:28, 11070.17 examples/s]Generating train split: 515178 examples [00:28, 10718.33 examples/s]Generating train split: 516332 examples [00:28, 10913.77 examples/s]Generating train split: 518000 examples [00:28, 10785.70 examples/s]Generating train split: 519107 examples [00:29, 10847.59 examples/s]Generating train split: 520854 examples [00:29, 11092.06 examples/s]Generating train split: 522302 examples [00:29, 10619.78 examples/s]Generating train split: 524000 examples [00:29, 10469.65 examples/s]Generating train split: 525203 examples [00:29, 10820.96 examples/s]Generating train split: 526316 examples [00:29, 10894.39 examples/s]Generating train split: 527733 examples [00:29, 11342.71 examples/s]Generating train split: 528970 examples [00:29, 11606.60 examples/s]Generating train split: 530672 examples [00:30, 11294.54 examples/s]Generating train split: 532159 examples [00:30, 10772.52 examples/s]Generating train split: 533375 examples [00:30, 11105.26 examples/s]Generating train split: 534763 examples [00:30, 11483.53 examples/s]Generating train split: 535995 examples [00:30, 11688.87 examples/s]Generating train split: 537705 examples [00:30, 11509.80 examples/s]Generating train split: 538983 examples [00:30, 11830.67 examples/s]Generating train split: 540859 examples [00:30, 12066.50 examples/s]Generating train split: 542857 examples [00:31, 12152.30 examples/s]Generating train split: 544774 examples [00:31, 12013.96 examples/s]Generating train split: 545980 examples [00:31, 12021.48 examples/s]Generating train split: 547802 examples [00:31, 11919.61 examples/s]Generating train split: 549000 examples [00:31, 11724.98 examples/s]Generating train split: 550243 examples [00:31, 11897.80 examples/s]Generating train split: 551747 examples [00:31, 12210.03 examples/s]Generating train split: 553000 examples [00:31, 11779.49 examples/s]Generating train split: 554254 examples [00:32, 11978.71 examples/s]Generating train split: 555756 examples [00:32, 12433.92 examples/s]Generating train split: 557475 examples [00:32, 12073.62 examples/s]Generating train split: 558756 examples [00:32, 11949.20 examples/s]Generating train split: 560000 examples [00:32, 11692.47 examples/s]Generating train split: 561179 examples [00:32, 11716.57 examples/s]Generating train split: 562483 examples [00:32, 12079.66 examples/s]Generating train split: 563771 examples [00:32, 12191.05 examples/s]Generating train split: 565492 examples [00:33, 11919.23 examples/s]Generating train split: 566789 examples [00:33, 12194.62 examples/s]Generating train split: 568755 examples [00:33, 12181.33 examples/s]Generating train split: 570476 examples [00:33, 11943.89 examples/s]Generating train split: 571749 examples [00:33, 12132.33 examples/s]Generating train split: 572973 examples [00:33, 12154.30 examples/s]Generating train split: 574786 examples [00:33, 11908.03 examples/s]Generating train split: 576000 examples [00:33, 11505.64 examples/s]Generating train split: 577309 examples [00:34, 11908.09 examples/s]Generating train split: 578765 examples [00:34, 12366.85 examples/s]Generating train split: 580769 examples [00:34, 12203.77 examples/s]Generating train split: 582000 examples [00:34, 11870.62 examples/s]Generating train split: 583252 examples [00:34, 12034.02 examples/s]Generating train split: 584774 examples [00:34, 12479.88 examples/s]Generating train split: 586742 examples [00:34, 12442.03 examples/s]Generating train split: 588492 examples [00:34, 12182.03 examples/s]Generating train split: 589748 examples [00:35, 12271.01 examples/s]Generating train split: 591000 examples [00:35, 11901.18 examples/s]Generating train split: 592222 examples [00:35, 11981.77 examples/s]Generating train split: 593487 examples [00:35, 12161.38 examples/s]Generating train split: 594800 examples [00:35, 12429.74 examples/s]Generating train split: 596767 examples [00:35, 12245.46 examples/s]Generating train split: 598000 examples [00:35, 11825.46 examples/s]Generating train split: 599269 examples [00:35, 12048.41 examples/s]Generating train split: 600815 examples [00:35, 12623.11 examples/s]Generating train split: 602769 examples [00:36, 12463.55 examples/s]Generating train split: 604753 examples [00:36, 12512.02 examples/s]Generating train split: 606367 examples [00:36, 11950.77 examples/s]Generating train split: 607799 examples [00:36, 12266.76 examples/s]Generating train split: 609782 examples [00:36, 12375.22 examples/s]Generating train split: 611755 examples [00:36, 12159.55 examples/s]Generating train split: 613000 examples [00:36, 11913.76 examples/s]Generating train split: 614218 examples [00:37, 11975.51 examples/s]Generating train split: 615437 examples [00:37, 12022.72 examples/s]Generating train split: 616728 examples [00:37, 11862.90 examples/s]Generating train split: 617959 examples [00:37, 11981.29 examples/s]Generating train split: 619720 examples [00:37, 11661.37 examples/s]Generating train split: 621000 examples [00:37, 11493.69 examples/s]Generating train split: 622312 examples [00:37, 11913.68 examples/s]Generating train split: 623820 examples [00:37, 12459.01 examples/s]Generating train split: 625746 examples [00:37, 12448.86 examples/s]Generating train split: 627424 examples [00:38, 12021.22 examples/s]Generating train split: 628758 examples [00:38, 12209.91 examples/s]Generating train split: 630000 examples [00:38, 12001.78 examples/s]Generating train split: 632000 examples [00:38, 12114.03 examples/s]Generating train split: 633245 examples [00:38, 12186.21 examples/s]Generating train split: 634806 examples [00:38, 12631.29 examples/s]Generating train split: 636780 examples [00:38, 12527.01 examples/s]Generating train split: 638766 examples [00:39, 12647.65 examples/s]Generating train split: 640841 examples [00:39, 12738.16 examples/s]Generating train split: 642733 examples [00:39, 12523.98 examples/s]Generating train split: 644478 examples [00:39, 12248.65 examples/s]Generating train split: 646218 examples [00:39, 12049.90 examples/s]Generating train split: 647781 examples [00:39, 12437.36 examples/s]Generating train split: 649854 examples [00:39, 12611.45 examples/s]Generating train split: 651840 examples [00:40, 12797.02 examples/s]Generating train split: 653833 examples [00:40, 12673.29 examples/s]Generating train split: 655789 examples [00:40, 12663.52 examples/s]Generating train split: 657433 examples [00:40, 12154.06 examples/s]Generating train split: 658788 examples [00:40, 12303.35 examples/s]Generating train split: 660813 examples [00:40, 12454.40 examples/s]Generating train split: 662829 examples [00:40, 12491.77 examples/s]Generating train split: 664776 examples [00:41, 12498.55 examples/s]Generating train split: 666748 examples [00:41, 12387.43 examples/s]Generating train split: 668384 examples [00:41, 11943.73 examples/s]Generating train split: 669790 examples [00:41, 12161.68 examples/s]Generating train split: 671790 examples [00:41, 12085.65 examples/s]Generating train split: 673814 examples [00:41, 12381.78 examples/s]Generating train split: 675787 examples [00:42, 12319.87 examples/s]Generating train split: 677790 examples [00:42, 12348.51 examples/s]Generating train split: 679788 examples [00:42, 12273.12 examples/s]Generating train split: 681790 examples [00:42, 12205.87 examples/s]Generating train split: 683802 examples [00:42, 12405.52 examples/s]Generating train split: 685791 examples [00:42, 12439.61 examples/s]Generating train split: 687798 examples [00:43, 12503.21 examples/s]Generating train split: 689751 examples [00:43, 12413.52 examples/s]Generating train split: 691000 examples [00:43, 12131.97 examples/s]Generating train split: 692297 examples [00:43, 12321.82 examples/s]Generating train split: 693750 examples [00:43, 12618.56 examples/s]Generating train split: 695770 examples [00:43, 12573.78 examples/s]Generating train split: 697721 examples [00:43, 12491.42 examples/s]Generating train split: 699000 examples [00:43, 12218.17 examples/s]Generating train split: 700334 examples [00:44, 12489.60 examples/s]Generating train split: 701809 examples [00:44, 12586.56 examples/s]Generating train split: 703770 examples [00:44, 12539.96 examples/s]Generating train split: 705826 examples [00:44, 12596.53 examples/s]Generating train split: 707751 examples [00:44, 12460.68 examples/s]Generating train split: 709000 examples [00:44, 12282.44 examples/s]Generating train split: 710296 examples [00:44, 12445.73 examples/s]Generating train split: 711776 examples [00:44, 12583.95 examples/s]Generating train split: 713786 examples [00:45, 12675.48 examples/s]Generating train split: 715763 examples [00:45, 12593.03 examples/s]Generating train split: 717795 examples [00:45, 12598.47 examples/s]Generating train split: 719781 examples [00:45, 12505.00 examples/s]Generating train split: 721759 examples [00:45, 12484.09 examples/s]Generating train split: 723515 examples [00:45, 12251.07 examples/s]Generating train split: 724804 examples [00:45, 12388.15 examples/s]Generating train split: 726784 examples [00:46, 12395.94 examples/s]Generating train split: 728806 examples [00:46, 12569.09 examples/s]Generating train split: 730804 examples [00:46, 12669.20 examples/s]Generating train split: 732696 examples [00:46, 12529.43 examples/s]Generating train split: 733981 examples [00:46, 12598.63 examples/s]Generating train split: 735903 examples [00:46, 12662.94 examples/s]Generating train split: 737730 examples [00:47, 12502.05 examples/s]Generating train split: 739000 examples [00:47, 12054.36 examples/s]Generating train split: 740366 examples [00:47, 12439.23 examples/s]Generating train split: 741808 examples [00:47, 12695.89 examples/s]Generating train split: 743764 examples [00:47, 12481.70 examples/s]Generating train split: 745733 examples [00:47, 12459.11 examples/s]Generating train split: 747000 examples [00:47, 12134.20 examples/s]Generating train split: 748262 examples [00:47, 12246.90 examples/s]Generating train split: 749805 examples [00:47, 12536.39 examples/s]Generating train split: 751751 examples [00:48, 12324.32 examples/s]Generating train split: 753000 examples [00:48, 12026.94 examples/s]Generating train split: 754249 examples [00:48, 12139.01 examples/s]Generating train split: 756000 examples [00:48, 11923.38 examples/s]Generating train split: 757308 examples [00:48, 12211.43 examples/s]Generating train split: 758808 examples [00:48, 12585.49 examples/s]Generating train split: 760789 examples [00:48, 12515.45 examples/s]Generating train split: 762762 examples [00:49, 12366.01 examples/s]Generating train split: 764771 examples [00:49, 12430.49 examples/s]Generating train split: 766401 examples [00:49, 11950.38 examples/s]Generating train split: 767775 examples [00:49, 12196.48 examples/s]Generating train split: 769815 examples [00:49, 12289.60 examples/s]Generating train split: 771743 examples [00:49, 12272.49 examples/s]Generating train split: 773415 examples [00:49, 11929.28 examples/s]Generating train split: 774792 examples [00:50, 12192.30 examples/s]Generating train split: 776432 examples [00:50, 11785.41 examples/s]Generating train split: 777788 examples [00:50, 12067.83 examples/s]Generating train split: 779805 examples [00:50, 12281.78 examples/s]Generating train split: 781816 examples [00:50, 12506.08 examples/s]Generating train split: 783767 examples [00:50, 12520.16 examples/s]Generating train split: 785754 examples [00:50, 12506.22 examples/s]Generating train split: 787840 examples [00:51, 12691.39 examples/s]Generating train split: 789845 examples [00:51, 12680.24 examples/s]Generating train split: 791759 examples [00:51, 12563.42 examples/s]Generating train split: 793805 examples [00:51, 12712.91 examples/s]Generating train split: 795821 examples [00:51, 12774.09 examples/s]Generating train split: 797726 examples [00:51, 12652.56 examples/s]Generating train split: 799000 examples [00:51, 12515.23 examples/s]Generating train split: 800392 examples [00:52, 12840.33 examples/s]Generating train split: 801849 examples [00:52, 13161.93 examples/s]Generating train split: 803820 examples [00:52, 13055.18 examples/s]Generating train split: 805829 examples [00:52, 13076.90 examples/s]Generating train split: 807760 examples [00:52, 12965.05 examples/s]Generating train split: 809853 examples [00:52, 13145.25 examples/s]Generating train split: 811791 examples [00:52, 12949.99 examples/s]Generating train split: 813765 examples [00:53, 12900.05 examples/s]Generating train split: 815866 examples [00:53, 12951.72 examples/s]Generating train split: 817942 examples [00:53, 13212.25 examples/s]Generating train split: 819957 examples [00:53, 13275.24 examples/s]Generating train split: 821890 examples [00:53, 13146.62 examples/s]Generating train split: 823785 examples [00:53, 12984.85 examples/s]Generating train split: 825839 examples [00:54, 12817.79 examples/s]Generating train split: 827761 examples [00:54, 12630.51 examples/s]Generating train split: 829855 examples [00:54, 12628.55 examples/s]Generating train split: 831833 examples [00:54, 12787.08 examples/s]Generating train split: 833816 examples [00:54, 12907.37 examples/s]Generating train split: 835808 examples [00:54, 12857.00 examples/s]Generating train split: 837844 examples [00:54, 12924.86 examples/s]Generating train split: 839877 examples [00:55, 13105.33 examples/s]Generating train split: 841774 examples [00:55, 12845.33 examples/s]Generating train split: 843145 examples [00:55, 11748.52 examples/s]Generating train split: 844510 examples [00:55, 10906.24 examples/s]Generating train split: 846000 examples [00:55, 10430.69 examples/s]Generating train split: 847463 examples [00:55, 10116.42 examples/s]Generating train split: 848804 examples [00:56, 9768.58 examples/s] Generating train split: 850038 examples [00:56, 9311.98 examples/s]Generating train split: 851000 examples [00:56, 9244.95 examples/s]Generating train split: 852000 examples [00:56, 9252.29 examples/s]Generating train split: 852975 examples [00:56, 9373.44 examples/s]Generating train split: 854190 examples [00:56, 8927.96 examples/s]Generating train split: 855519 examples [00:56, 8903.59 examples/s]Generating train split: 856494 examples [00:56, 8864.01 examples/s]Generating train split: 857509 examples [00:57, 8947.60 examples/s]Generating train split: 858826 examples [00:57, 8886.98 examples/s]Generating train split: 860065 examples [00:57, 8678.53 examples/s]Generating train split: 861000 examples [00:57, 8666.09 examples/s]Generating train split: 862000 examples [00:57, 8759.25 examples/s]Generating train split: 863000 examples [00:57, 8953.25 examples/s]Generating train split: 864000 examples [00:57, 9039.25 examples/s]Generating train split: 864963 examples [00:57, 9197.43 examples/s]Generating train split: 866156 examples [00:57, 8738.24 examples/s]Generating train split: 867068 examples [00:58, 8833.91 examples/s]Generating train split: 868000 examples [00:58, 8919.00 examples/s]Generating train split: 868977 examples [00:58, 9150.59 examples/s]Generating train split: 870280 examples [00:58, 8971.60 examples/s]Generating train split: 871459 examples [00:58, 9706.59 examples/s]Generating train split: 873764 examples [00:58, 13337.82 examples/s]Generating train split: 876000 examples [00:58, 15777.11 examples/s]Generating train split: 878274 examples [00:58, 17757.56 examples/s]Generating train split: 880606 examples [00:58, 19363.83 examples/s]Generating train split: 882931 examples [00:59, 20497.27 examples/s]Generating train split: 885140 examples [00:59, 20962.80 examples/s]Generating train split: 887443 examples [00:59, 21561.98 examples/s]Generating train split: 889696 examples [00:59, 21844.69 examples/s]Generating train split: 891904 examples [00:59, 21911.22 examples/s]Generating train split: 894171 examples [00:59, 22037.48 examples/s]Generating train split: 896456 examples [00:59, 22273.52 examples/s]Generating train split: 898785 examples [00:59, 22574.81 examples/s]Generating train split: 902045 examples [00:59, 22069.83 examples/s]Generating train split: 905074 examples [01:00, 21399.29 examples/s]Generating train split: 908223 examples [01:00, 21260.20 examples/s]Generating train split: 911267 examples [01:00, 20942.92 examples/s]Generating train split: 914153 examples [01:00, 20394.99 examples/s]Generating train split: 917105 examples [01:00, 20169.18 examples/s]Generating train split: 919167 examples [01:00, 20271.25 examples/s]Generating train split: 922144 examples [01:00, 20128.61 examples/s]Generating train split: 925204 examples [01:01, 20210.69 examples/s]Generating train split: 928186 examples [01:01, 20102.75 examples/s]Generating train split: 930201 examples [01:01, 20112.42 examples/s]Generating train split: 930514 examples [01:01, 15174.92 examples/s]
+Map (num_proc=4):   0%|          | 0/1000 [00:00<?, ? examples/s]Token indices sequence length is longer than the specified maximum sequence length for this model (4718592 > 16384). Running this sequence through the model will result in indexing errors
+Token indices sequence length is longer than the specified maximum sequence length for this model (5013504 > 16384). Running this sequence through the model will result in indexing errors
+Token indices sequence length is longer than the specified maximum sequence length for this model (5111808 > 16384). Running this sequence through the model will result in indexing errors
+Map (num_proc=4):  25%|██▌       | 250/1000 [00:12<00:36, 20.30 examples/s]Map (num_proc=4):  50%|█████     | 500/1000 [00:13<00:10, 45.58 examples/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5308416 > 16384). Running this sequence through the model will result in indexing errors
+Map (num_proc=4):  75%|███████▌  | 750/1000 [00:14<00:03, 71.75 examples/s]Map (num_proc=4): 100%|██████████| 1000/1000 [00:14<00:00, 102.78 examples/s]Map (num_proc=4): 100%|██████████| 1000/1000 [00:15<00:00, 64.70 examples/s] 
+max_steps is given, it will override any value given in num_train_epochs
+  0%|          | 0/2400 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/llama.py", line 164, in <module>
+    train()
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/llama.py", line 158, in train
+    trainer.train(resume_from_checkpoint=False)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2052, in train
+    return inner_training_loop(
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2388, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3485, in training_step
+    loss = self.compute_loss(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3532, in compute_loss
+    outputs = model(**inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 823, in forward
+    return model_forward(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 811, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/venv/jenga/lib/python3.10/site-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+    return func(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/peft_model.py", line 1993, in forward
+    return self.base_model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 330, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_llama_get_sparsity_thresh.py", line 1248, in forward
+    outputs = self.model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_llama_get_sparsity_thresh.py", line 1004, in forward
+    inputs_embeds = self.embed_tokens(input_ids)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 162, in forward
+    return F.embedding(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/functional.py", line 2233, in embedding
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse)
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+  0%|          | 0/2400 [00:00<?, ?it/s]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:215: UserWarning: 
+NVIDIA RTX PRO 5000 Blackwell with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90.
+If you want to use the NVIDIA RTX PRO 5000 Blackwell GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]Loading checkpoint shards:  50%|█████     | 1/2 [00:05<00:05,  5.13s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  3.10s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  3.41s/it]
+max_steps is given, it will override any value given in num_train_epochs
+  0%|          | 0/2400 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/llama.py", line 164, in <module>
+    train()
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/llama.py", line 158, in train
+    trainer.train(resume_from_checkpoint=False)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2052, in train
+    return inner_training_loop(
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2388, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3485, in training_step
+    loss = self.compute_loss(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3532, in compute_loss
+    outputs = model(**inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 823, in forward
+    return model_forward(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 811, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/venv/jenga/lib/python3.10/site-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+    return func(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/peft_model.py", line 1993, in forward
+    return self.base_model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 330, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_llama_get_sparsity_thresh.py", line 1248, in forward
+    outputs = self.model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_llama_get_sparsity_thresh.py", line 1004, in forward
+    inputs_embeds = self.embed_tokens(input_ids)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 162, in forward
+    return F.embedding(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/functional.py", line 2233, in embedding
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse)
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+  0%|          | 0/2400 [00:00<?, ?it/s]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:215: UserWarning: 
+NVIDIA RTX PRO 5000 Blackwell with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90.
+If you want to use the NVIDIA RTX PRO 5000 Blackwell GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]/venv/jenga/lib/python3.10/site-packages/torch/_utils.py:831: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  return self.fget.__get__(instance, owner)()
+Loading checkpoint shards:  50%|█████     | 1/2 [00:03<00:03,  3.84s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.20s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:04<00:00,  2.45s/it]
+Map (num_proc=4):   0%|          | 0/1000 [00:00<?, ? examples/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5013504 > 16384). Running this sequence through the model will result in indexing errors
+Token indices sequence length is longer than the specified maximum sequence length for this model (5390336 > 16384). Running this sequence through the model will result in indexing errors
+Token indices sequence length is longer than the specified maximum sequence length for this model (5455872 > 16384). Running this sequence through the model will result in indexing errors
+Map (num_proc=4):  25%|██▌       | 250/1000 [00:15<00:46, 16.14 examples/s]Token indices sequence length is longer than the specified maximum sequence length for this model (5750784 > 16384). Running this sequence through the model will result in indexing errors
+Map (num_proc=4):  50%|█████     | 500/1000 [00:16<00:13, 36.09 examples/s]Map (num_proc=4):  75%|███████▌  | 750/1000 [00:17<00:04, 58.99 examples/s]Map (num_proc=4): 100%|██████████| 1000/1000 [00:18<00:00, 86.73 examples/s]Map (num_proc=4): 100%|██████████| 1000/1000 [00:18<00:00, 53.19 examples/s]
+max_steps is given, it will override any value given in num_train_epochs
+  0%|          | 0/2400 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/opt.py", line 156, in <module>
+    train()
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/opt.py", line 151, in train
+    trainer.train(resume_from_checkpoint=False)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2052, in train
+    return inner_training_loop(
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2388, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3485, in training_step
+    loss = self.compute_loss(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3532, in compute_loss
+    outputs = model(**inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 823, in forward
+    return model_forward(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 811, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/venv/jenga/lib/python3.10/site-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+    return func(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/peft_model.py", line 1993, in forward
+    return self.base_model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 330, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_opt_get_sparsity_thresh.py", line 1057, in forward
+    outputs = self.model.decoder(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_opt_get_sparsity_thresh.py", line 744, in forward
+    inputs_embeds = self.embed_tokens(input_ids)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1568, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 162, in forward
+    return F.embedding(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/functional.py", line 2233, in embedding
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse)
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+  0%|          | 0/2400 [00:00<?, ?it/s]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:51: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/venv/jenga/lib/python3.10/site-packages/torch/cuda/__init__.py:215: UserWarning: 
+NVIDIA RTX PRO 5000 Blackwell with CUDA capability sm_120 is not compatible with the current PyTorch installation.
+The current PyTorch install supports CUDA capabilities sm_50 sm_60 sm_70 sm_75 sm_80 sm_86 sm_90.
+If you want to use the NVIDIA RTX PRO 5000 Blackwell GPU with PyTorch, please check the instructions at https://pytorch.org/get-started/locally/
+
+  warnings.warn(
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]/venv/jenga/lib/python3.10/site-packages/torch/_utils.py:831: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+  return self.fget.__get__(instance, owner)()
+Loading checkpoint shards:  50%|█████     | 1/2 [00:04<00:04,  4.94s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  2.86s/it]Loading checkpoint shards: 100%|██████████| 2/2 [00:06<00:00,  3.17s/it]
+max_steps is given, it will override any value given in num_train_epochs
+  0%|          | 0/2400 [00:00<?, ?it/s]Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/opt.py", line 156, in <module>
+    train()
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/opt.py", line 151, in train
+    trainer.train(resume_from_checkpoint=False)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2052, in train
+    return inner_training_loop(
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 2388, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3485, in training_step
+    loss = self.compute_loss(model, inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/transformers/trainer.py", line 3532, in compute_loss
+    outputs = model(**inputs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 823, in forward
+    return model_forward(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/accelerate/utils/operations.py", line 811, in __call__
+    return convert_to_fp32(self.model_forward(*args, **kwargs))
+  File "/venv/jenga/lib/python3.10/site-packages/torch/amp/autocast_mode.py", line 16, in decorate_autocast
+    return func(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/peft_model.py", line 1993, in forward
+    return self.base_model(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/peft/tuners/tuners_utils.py", line 330, in forward
+    return self.model.forward(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_opt_get_sparsity_thresh.py", line 1057, in forward
+    outputs = self.model.decoder(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1527, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/workspace/jenga-labs/src/jenga/models/modeling_opt_get_sparsity_thresh.py", line 744, in forward
+    inputs_embeds = self.embed_tokens(input_ids)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1518, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1568, in _call_impl
+    result = forward_call(*args, **kwargs)
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/modules/sparse.py", line 162, in forward
+    return F.embedding(
+  File "/venv/jenga/lib/python3.10/site-packages/torch/nn/functional.py", line 2233, in embedding
+    return torch.embedding(weight, input, padding_idx, scale_grad_by_freq, sparse)
+RuntimeError: CUDA error: no kernel image is available for execution on the device
+CUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.
+For debugging consider passing CUDA_LAUNCH_BLOCKING=1.
+Compile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.
+
+  0%|          | 0/2400 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/plot_llama2_attn.py", line 49, in <module>
+    threshold_avg = sum(thresholds) / len(thresholds)
+ZeroDivisionError: division by zero
+Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/plot_llama2_mlp.py", line 32, in <module>
+    threshold_avg = sum(thresholds) / len(thresholds)
+ZeroDivisionError: division by zero
+Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/plot_opt_attn.py", line 45, in <module>
+    threshold_avg = sum(thresholds) / len(thresholds)
+ZeroDivisionError: division by zero
+Traceback (most recent call last):
+  File "/workspace/jenga-labs/src/experiment/ablation/algorithm/plot_opt_mlp.py", line 43, in <module>
+    threshold_avg = sum(thresholds) / len(thresholds)
+ZeroDivisionError: division by zero

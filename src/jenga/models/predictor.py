@@ -27,25 +27,69 @@ class AttnPredictor1(nn.Module):
         self.klinear1 = nn.Linear(dim*64, hidden_dim)
         self.klinear2 = nn.Linear(hidden_dim, dim*64)
         self.klinear3 = nn.Linear(dim*64, dim)
-        
+
         self.n_head = n_head
     def forward(self, hidden_states):
         bsz, q_len, _ = hidden_states.size()
         hidden_states = hidden_states.view(bsz, q_len, self.n_head, -1).transpose(1, 2)
         hidden_states = hidden_states.reshape(bsz, self.n_head, q_len//64, -1)
-        
+
         qx = F.relu(self.qlinear1(hidden_states))
         qx = F.relu(self.qlinear2(qx))
         qx = self.qlinear3(qx)
-        
+
         kx = F.relu(self.klinear1(hidden_states))
         kx = F.relu(self.klinear2(kx))
         kx = self.klinear3(kx)
-        
+
         attn = torch.matmul(qx, kx.transpose(-1, -2))
         attn = attn.sum(dim=1)
-        
+
         # attn *= 64
+        return attn
+
+
+class CNNAttnPredictor(nn.Module):
+    """
+    Drop in replacement for AttnPredictor1 that swaps the per block MLPs for two
+    1D convolutions over the block axis. Same input and output contract, so the
+    rest of the Jenga pipeline does not change. This is Extension B from PLAN.md.
+    """
+    def __init__(self, dim, hidden_dim, n_head=32, kernel_size=3):
+        super().__init__()
+        in_ch = dim * 64
+        pad = kernel_size // 2
+
+        self.qconv1 = nn.Conv1d(in_ch, hidden_dim, kernel_size=kernel_size, padding=pad)
+        self.qconv2 = nn.Conv1d(hidden_dim, in_ch, kernel_size=kernel_size, padding=pad)
+        self.qproj  = nn.Linear(in_ch, dim)
+
+        self.kconv1 = nn.Conv1d(in_ch, hidden_dim, kernel_size=kernel_size, padding=pad)
+        self.kconv2 = nn.Conv1d(hidden_dim, in_ch, kernel_size=kernel_size, padding=pad)
+        self.kproj  = nn.Linear(in_ch, dim)
+
+        self.n_head = n_head
+
+    def _branch(self, blocks, conv1, conv2, proj):
+        # blocks: (B, H, num_blocks, in_ch) -> reshape to (B*H, in_ch, num_blocks) for Conv1d
+        bsz, n_head, num_blocks, in_ch = blocks.size()
+        x = blocks.reshape(bsz * n_head, num_blocks, in_ch).transpose(1, 2)
+        x = F.relu(conv1(x))
+        x = F.relu(conv2(x))
+        x = x.transpose(1, 2)
+        x = proj(x)
+        return x.view(bsz, n_head, num_blocks, -1)
+
+    def forward(self, hidden_states):
+        bsz, q_len, _ = hidden_states.size()
+        hidden_states = hidden_states.view(bsz, q_len, self.n_head, -1).transpose(1, 2)
+        hidden_states = hidden_states.reshape(bsz, self.n_head, q_len // 64, -1)
+
+        qx = self._branch(hidden_states, self.qconv1, self.qconv2, self.qproj)
+        kx = self._branch(hidden_states, self.kconv1, self.kconv2, self.kproj)
+
+        attn = torch.matmul(qx, kx.transpose(-1, -2))
+        attn = attn.sum(dim=1)
         return attn
     
     
