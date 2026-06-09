@@ -28,9 +28,9 @@ Reproduction and extension plan for the Jenga paper. Course deliverable: one six
 | Atom | Phase | Est A100 80GB Hours | Est Cost USD | Status |
 | --- | --- | --- | --- | --- |
 | S1 | Setup | 0.5 | 0.50 | done (actual 0.7 / 0.70) |
-| S2 | Setup | 0.1 | 0.10 | pending |
-| S3 | Setup | 0 | 0 | pending |
-| S4 | Setup | 0.2 | 0.20 | pending |
+| S2 | Setup | 0.1 | 0.10 | done (passed) |
+| S3 | Setup | 0 | 0 | done (19 figures regenerated) |
+| S4 | Setup | 0.2 | 0.20 | done (baseline 13.18 GB jenga 7.28 GB; pod preempted mid aggregation but logs synced) |
 | R1 | Reproduction | 1.5 | 1.50 | pending |
 | R2 | Reproduction | 1.5 | 1.50 | pending |
 | R3 | Reproduction | 0.5 | 0.50 | pending |

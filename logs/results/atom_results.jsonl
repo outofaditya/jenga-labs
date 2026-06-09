@@ -1,0 +1,2 @@
+{"atom": "S4", "log": "logs/end2end/memory/opt-350m-8192-a800-baseline.log", "method": "baseline", "model": "opt-350m", "peak_memory_mb": 13484.91552734375, "seq_len": 8192}
+{"atom": "S4", "log": "logs/end2end/memory/opt-350m-8192-a800.log", "method": "jenga", "model": "opt-350m", "peak_memory_mb": 7453.1103515625, "seq_len": 8192}
