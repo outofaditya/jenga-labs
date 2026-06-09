@@ -16,6 +16,50 @@ Reproduction and extension plan for the Jenga paper. Course deliverable: one six
 4. **Naming.** The system is "Jenga". Avoid "JENGA" and marketing language in artifacts that feed the report.
 5. **Fairness rule for extensions.** Every extension in the Improvement category is compared against a Jenga baseline retrained under the same training budget as the extension itself, not the authors' shipped adapters.
 
+## New Pod Handshake (Strict Preflight)
+
+Every new pod instance burns money the moment the meter starts. Before ANY `nohup`, `bash scripts/run_pod.sh`, or background process is launched on a fresh pod, the probe block below MUST be run and its output read in full. No bootstrap until every line has been inspected and a strategy chosen.
+
+```bash
+ssh ... 'bash -s' << "PROBE"
+echo "=== SYSTEM ==="
+hostname
+nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
+df -h /
+echo "=== PYTHON ==="
+which python python3 pip pip3
+python3 --version || true
+python --version 2>/dev/null || echo "no system python"
+echo "=== CONDA AND VENVS ==="
+ls -d /opt/miniforge3 /opt/conda /opt/miniconda3 /venv /venv/* 2>/dev/null || true
+for c in /opt/miniforge3/bin/conda /opt/conda/bin/conda /opt/miniconda3/bin/conda; do
+  [ -x "$c" ] && { echo "conda=$c"; "$c" info --envs 2>/dev/null; break; }
+done
+echo "=== HF TOOLING (xet is a known hang risk) ==="
+for p in python3 /venv/jenga/bin/python /venv/main/bin/python /opt/miniforge3/bin/python; do
+  [ -x "$p" ] || continue
+  echo "--- $p ---"
+  "$p" -c "import huggingface_hub; print('hf_hub', huggingface_hub.__version__)" 2>&1
+  "$p" -c "import hf_xet; print('hf_xet PRESENT', hf_xet.__file__)" 2>&1 | head -1
+done
+echo "=== EXISTING WORK ==="
+ls -d /workspace/jenga-labs 2>/dev/null && cd /workspace/jenga-labs && git log -1 --oneline
+ls /workspace/.bootstrap_done /workspace/.bootstrap_failed 2>/dev/null
+PROBE
+```
+
+Decision rules from the probe output:
+
+* **If `hf_xet` is installed anywhere it will be used by `snapshot_download` and will hang silently with active TCP connections but zero byte progress.** Disable it for the bootstrap by exporting `HF_HUB_DISABLE_XET=1` AND uninstalling it from the env that will run the download.
+* **If a conda env already exists at `/venv/jenga` or similar:** treat it as the canonical env. Set `export PATH=/venv/jenga/bin:$PATH` before any pip or python call. Never let `run_pod.sh` fall into the "system python is fine" branch by accident — that branch silently writes pip installs into the wrong site-packages.
+* **If system python is 3.12 or newer:** force the conda branch even if `/venv/jenga` exists, because `torch==2.1.2` has no wheel for Python 3.12.
+* **If `.bootstrap_done` already exists:** the previous run succeeded. Verify the sanity sentinels still pass and skip straight to the next atom.
+* **Disk under 100 GB:** apply ignore_patterns aggressively for TF, Flax, Llama `original/`, and Llama `pytorch_model.bin`. With ~3 TB disk we can be looser.
+* **Never launch two `bootstrap.sh` processes concurrently:** they deadlock on HF cache file locks and both stall silently.
+* **Never run an unguarded `snapshot_download` with `shutil.rmtree(dest)` while another process may be writing to the same dest:** that produces `OSError: Directory not empty` and stops the bootstrap.
+
+This handshake is mandatory before pod boot for every subsequent atom run.
+
 ## Measurement Rigor
 
 * **Warmup.** Five forward and backward passes before any logging.
