@@ -597,19 +597,20 @@ class LlamaFlashAttention2(LlamaAttention):
                 if merge_eliminated:
                     drop_token_idx = (dropped_block_idx[:, None] * 64 +
                                        torch.arange(64, device=idx_blocks.device).view(1, 64)).view(-1)
-                    # mean RoPE position for the merged block, replicated 64x
-                    merged_pos = int(drop_token_idx.float().mean().item())
-                    merge_idx = torch.full((64,), merged_pos, device=idx.device, dtype=idx.dtype)
+                    # One merged token at a unique synthetic position past the
+                    # original sequence so flash attn varlen does not treat
+                    # repeated positions as zero length batch segments.
+                    merged_pos = int(num_blocks_total * 64) + int(self.layer_idx)
+                    merge_idx = torch.tensor([merged_pos], device=idx.device, dtype=idx.dtype)
                 del sum_q, hidden_states_
 
             # query_states = query_states[:, :, idx, :]
             if merge_eliminated:
                 kept_hidden = hidden_states[:, idx, :]
                 dropped_hidden = hidden_states[:, drop_token_idx, :]
-                merged_vec = dropped_hidden.mean(dim=1, keepdim=True)
-                merged_block = merged_vec.expand(-1, 64, -1)
-                hidden_states = torch.cat([kept_hidden, merged_block], dim=1)
-                q_len_now += 64
+                merged_vec = dropped_hidden.mean(dim=1, keepdim=True)  # (bsz, 1, hidden)
+                hidden_states = torch.cat([kept_hidden, merged_vec], dim=1)
+                q_len_now += 1
                 idx = torch.cat([idx, merge_idx], dim=0)
             else:
                 hidden_states = hidden_states[:, idx, :]
