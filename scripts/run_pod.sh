@@ -115,6 +115,9 @@ log "Python dependencies (requirements.txt)"
 # the artifact was tested against.
 pip install "${PIP_FLAGS[@]}" "setuptools<70" wheel "numpy<2"
 pip install "${PIP_FLAGS[@]}" -r requirements.txt
+# datasets >=3 dropped support for dataset loading scripts (the artifact ships
+# RedPajama-Data-1T-Sample.py). Pin to a 2.x release that still honors them.
+pip install "${PIP_FLAGS[@]}" "datasets<3"
 
 log "flash-attn (no build isolation)"
 if ! python -c "import flash_attn" >/dev/null 2>&1; then
