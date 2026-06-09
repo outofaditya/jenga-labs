@@ -41,6 +41,26 @@ INCLUDE_OPT_6_7B="${INCLUDE_OPT_6_7B:-0}"
 log()  { printf "\n[run_pod] %s\n" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
+ensure_bin() {
+  local name="$1" alt="$2"
+  if have "$name"; then return 0; fi
+  if have "$alt"; then
+    local shimdir="$HOME/.local/bin"
+    mkdir -p "$shimdir"
+    ln -sf "$(command -v "$alt")" "$shimdir/$name"
+    case ":$PATH:" in
+      *":$shimdir:"*) ;;
+      *) export PATH="$shimdir:$PATH" ;;
+    esac
+    log "shimmed $name -> $(command -v "$alt")"
+  else
+    echo "[run_pod] neither $name nor $alt on PATH" >&2
+    exit 1
+  fi
+}
+ensure_bin python python3
+ensure_bin pip pip3
+
 log "Verifying NVIDIA driver and CUDA visible"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
 python -c "import sys; print('python', sys.version)"
