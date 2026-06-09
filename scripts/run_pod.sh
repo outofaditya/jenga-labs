@@ -110,6 +110,10 @@ cd "$REPO_DIR"
 PIP_FLAGS=(--no-cache-dir --break-system-packages)
 
 log "Python dependencies (requirements.txt)"
+# Pre-pin build tooling and numpy so torch's cpp_extension can import pkg_resources
+# (torch 2.1.2 needs setuptools <70) and so wheels stay on the numpy 1.x ABI
+# the artifact was tested against.
+pip install "${PIP_FLAGS[@]}" "setuptools<70" wheel "numpy<2"
 pip install "${PIP_FLAGS[@]}" -r requirements.txt
 
 log "flash-attn (no build isolation)"
