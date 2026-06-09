@@ -17,6 +17,7 @@ Living draft of the course report. Final delivery is a six to eight page LaTeX d
 | 8 Limitations | empty | |
 | 9 Conclusion | empty | |
 | References | empty | |
+| Appendix B Software environment | populated (Atom S1) | |
 
 ## Title
 
@@ -116,4 +117,43 @@ Carry over the final post execution version of the budget ledger from `PLAN.md` 
 
 ## Appendix B. Software Environment
 
-Pinned versions, Vast.ai instance image, `pip freeze` output if space permits.
+Reproduction was performed on a single Vast.ai A100 80GB SXM4 instance.
+
+**Hardware.**
+
+| Item | Value |
+| --- | --- |
+| GPU | NVIDIA A100-SXM4-80GB (compute capability 8.0) |
+| Driver | 570.211.01 |
+| CUDA runtime | 12.8 (nvcc V12.8.93) |
+| Image base | Vast.ai PyTorch image with miniforge3 at `/opt/miniforge3` |
+
+**Python environment.** A dedicated `jenga` conda env is created at `/venv/jenga` (Python 3.10.20) by `scripts/run_pod.sh` so that the artifact's `torch==2.1.2` pin (which has no Python 3.12 wheels) can be honored.
+
+| Package | Version | Source |
+| --- | --- | --- |
+| torch | 2.1.2 | requirements.txt |
+| transformers | 4.45.2 | requirements.txt |
+| tokenizers | 0.20.1 | requirements.txt |
+| deepspeed | 0.14.0 | requirements.txt |
+| bitsandbytes | 0.41.1 | requirements.txt |
+| numpy | 1.26.4 | pinned `<2` to keep torch 2.1.2's numpy 1.x ABI |
+| accelerate | 1.13.0 | requirements.txt (unpinned, took latest) |
+| datasets | 5.0.0 | requirements.txt (unpinned, took latest) |
+| peft | 0.19.1 | requirements.txt (unpinned, took latest) |
+| flash-attn | 2.5.6 | prebuilt wheel `cu122torch2.1cxx11abiFALSE-cp310` (artifact source build was killed after 14 minutes of multi-architecture compile produced zero `.o` files; prebuilt swap saved an estimated 15+ minutes of wall clock) |
+| setuptools | <70 | pinned for `pkg_resources.packaging` which torch 2.1.2's `cpp_extension` imports |
+
+**Atom S1 result.** All seven sanity-check sentinels verified:
+
+```
+ok   checkpoints/predictor/predictor.pth
+ok   checkpoints/predictor/pruned_config.pth
+ok   dataset/PPL/proof_pile.bin
+ok   dataset/PPL/test_pg19.bin
+ok   checkpoints/llama2/config.json
+ok   checkpoints/opt-350m/config.json
+ok   checkpoints/opt-1.3b/config.json
+```
+
+The Hugging Face mirror at `outofaditya/jenga-labs-artifacts` (private) holds pre-extracted copies of `peft_model.zip`, `predictor.zip`, and `dataset.zip` so any future pod bootstraps from CDN instead of the Tsinghua cloud share.
