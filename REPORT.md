@@ -32,15 +32,30 @@ Reproducing Jenga and Two Exploratory Extensions to Contextual Token Sparsity fo
 
 ## Abstract
 
-To be drafted last.
+We reproduce the Jenga paper's headline memory and execution time results on a single rented A100 80GB and confirm its central trade-off claim: a 31 to 39% peak memory reduction for a 2 to 5% perplexity premium on long context LoRA fine tuning of Llama 2 7B. We also implement and evaluate two exploratory extensions on top of Jenga: a CNN attention predictor as a drop in replacement for the MLP predictor (decisive negative result, 15x worse MSE), and a token merging variant that replaces hard token elimination with mean pooled soft elimination. Our reproduction was budget bounded to under 30 GPU hours across four interruptible Vast.ai instances; this constrained us to single-seed measurements, a six-of-eight perplexity matrix instead of the paper's full matrix, and inference only extensions. The negative CNN finding illustrates that drop in replacements for the Jenga predictor do not transplant from related literature without retraining the adapter, which we identify as the natural next step.
 
 ## 1. Introduction
 
-Brief framing of long context fine tuning cost. One paragraph summary of Jenga's three pillar idea (contextual token sparsity, the elastic predictor, the segmented loss). One paragraph on our contribution scope: a budget bounded reproduction on A100 80GB plus three exploratory extensions ordered by integration risk. One sentence headline finding.
+Long context fine tuning of large language models is bottlenecked by activation memory, not weight memory. At sequence length 8K and beyond, the per-layer attention and MLP activations dwarf the LoRA optimizer state and even the base model weights, putting a hard ceiling on what a single GPU can fine tune. The Jenga paper (ATC 2025) attacks this bottleneck with **Contextual Token Sparsity**: a tiny per-block attention predictor decides, on the fly, which token blocks each layer can drop, and the dropped blocks are hard removed from the attention and MLP computations. The paper reports 1.3 to 2x memory savings and 1.1 to 1.2x speedups across Llama 2 7B and OPT family models, with perplexity within a few percent of dense LoRA.
+
+This report records a budget bounded reproduction of the paper's headline tables and figures and two exploratory extensions on top of Jenga. The reproduction was done on rented Vast.ai instances totaling under 30 GPU hours; the spot pricing of those instances caused multiple preemptions that forced trimming the perplexity scope from eight to six evaluations and dropping a planned QLoRA extension. We reproduce Figures 12, 13, 14 upper, and 18 of the paper and Table 7 (within the trimmed scope). The two extensions we ran are: an **adaptive threshold heuristic** that modulates per batch retention via predictor entropy (mechanism verified, downstream PPL deferred), a **CNN attention predictor** that swaps the MLP predictor for a 1D convolutional one (negative result: CNN MSE was 15x worse than MLP), and a **token merging variant** of Jenga that mean pools eliminated blocks into a single summary token rather than hard dropping them.
+
+**Headline finding.** The reproduction reproduces the paper's qualitative claims within ~5% on every measurable axis; the two extension experiments yield one mechanism check and one honest negative, with the token merging variant landing as the actually measurable improvement attempt.
 
 ## 2. Background
 
-Long context fine tuning constraints. PEFT and LoRA baselines. Sparse attention prior work. Jenga's place in that taxonomy. Cite the paper, the artifact repository, and any directly compared prior systems (LongLoRA, base PEFT).
+**Long context fine tuning constraints.** Self attention is quadratic in sequence length for memory of the intermediate scores matrix; flash attention reduces this to a streaming O(N) but the activations for the q, k, v projections and the MLP remain O(N) per layer, summing to O(L * N) across the L layer stack. For Llama 2 7B at 8K tokens and bf16 the activation footprint alone is ~30 GB during fine tuning, larger than the 14 GB the model weights occupy.
+
+**LoRA and PEFT.** Low Rank Adaptation (Hu et al. 2022) sidesteps the optimizer state explosion of full fine tuning by only training small rank decompositions of the attention projections. The base weights stay frozen so they fit comfortably; the activations however are not affected by LoRA. The artifact's baseline is LoRA r=8, alpha=16, attached to `q_proj`, `k_proj`, `v_proj`, `o_proj` on Llama 2 7B.
+
+**Sparse attention prior work.** Multiple recent systems attack the activation bottleneck differently. Sparse attention patterns (Longformer, BigBird, LongLoRA) restrict which keys each query attends to but keep all tokens in memory. KV cache compression (KIVI, SmoothQuant) reduces the bytes per kept token but not the count. Jenga is the first system we are aware of that prunes tokens *per layer per batch* using a learned predictor of attention importance and demonstrates that the dropped tokens can be eliminated from both attention and MLP computations without retraining the base model.
+
+**Jenga's three pillars.**
+1. **Contextual Token Sparsity** — a tiny per block MLP predictor scores attention block importance from layer input hidden states. Layers from index 15 onward keep only the top `config.sparse=0.4` fraction of blocks.
+2. **Elastic Pattern Predictor** — the predictor itself is trained offline (`scripts/ablation-predictor`) once and then frozen; it adds 656 MB to peak memory at any sequence length we measured (Section 4.3).
+3. **Segmented Loss** — the final cross-entropy over the large vocabulary is computed in chunks with intermediate activations discarded, eliminating a terminal logits memory spike (Section 4.5).
+
+Directly compared prior systems in this report: vanilla LoRA, LongLoRA shifted sparse attention, and dense baseline Llama 2 / Llama 3.
 
 ## 3. Reproduction Methodology
 
@@ -252,15 +267,31 @@ Both predictors show some seed-level variance in convergence, but the CNN additi
 
 ## 7. Discussion
 
-What worked. What did not. Negative results paragraph: explicitly call out which hypotheses were not supported and why. Where extensions fell short, state whether the bottleneck was algorithmic or budget.
+**What reproduced cleanly.** All four hands-on reproduction atoms (R1 memory, R2 time, R3 memory breakdown, R4 segmented loss) produced numbers within ~1% of the authors' shipped logs on the same configurations. Memory savings scaled with context length exactly as the paper claims (33% at 4K growing to 39% at 8K for Llama 2 7B), the predictor overhead stayed at a constant 656 MB regardless of sequence length, and the speedup over LoRA increased from 1.04x to 1.12x as context grew. The qualitative shape of Figures 12, 13, 14 upper, and 18 matches the paper.
+
+**The accuracy / memory trade-off held.** Section 4.4 shows Jenga's PPL is 2 to 5% higher than vanilla LoRA across `proof_pile` and `test_pg19` at the same context lengths. This is the paper's central trade-off claim and it reproduces. The 2 to 5% PPL premium for a 31 to 39% memory reduction is, on the face of the numbers, a strong system.
+
+**Where the extensions fell short.** I2 (CNN predictor) was a clean negative: at identical training setup the CNN final-five-epoch mean MSE was 15x worse than the MLP and exhibited catastrophic gradient spikes at later epochs. The negative result is not surprising in retrospect; the dropped tokens are *defined as low-information* by the predictor itself, so adding a local convolutional context over them mostly adds noise. The 1D convolution kernel of size 3 may also be too small to capture the document-scale dependencies that the predictor is meant to model.
+
+I1 (adaptive threshold) was a mechanism check, not an improvement comparison, because the artifact's perplexity evaluator does not exercise the patched Jenga forward. The scatter we recorded shows the heuristic shifts retention as designed (per batch range of 0.40 to 0.60 at `lam=0.2`), but we cannot say whether that modulation improves downstream PPL without writing a Jenga aware PPL evaluator.
+
+I3 (token merging) is the actually measurable improvement attempt. The current bound on its result is the comparison of baseline Jenga and Jenga + 1 token merged summary across four RedPajama documents; results are reported in Section 6.3.
+
+**Bottlenecks.** Of the three extensions, two were bottlenecked by *budget* (could not retrain the Jenga LoRA adapter to validate I1 quality; could not afford the QLoRA extension at all) and one was bottlenecked by *algorithm* (CNN predictor underperformed the MLP within budget allocated). No extension was bottlenecked by infrastructure or implementation correctness once the runtime concerns (Blackwell sm_120 incompatibility with torch 2.1.2, hf_xet hang, embedding resize for the Jenga adapter) were debugged.
 
 ## 8. Limitations
 
-Single seed on memory and time. Budget cap of approximately twenty dollars. Training step caps imposed by budget rather than convergence. Llama 3 8B coverage limited or absent depending on gated access timing. Dataset substitutions for the generalization probe.
+* **Single seed.** Memory, step time, perplexity, and extension numbers each come from a single seed. The paper's protocol requires three seeds for accuracy claims. Our seed averaging was relaxed when spot preemptions made the original 20-eval R5 matrix infeasible.
+* **Trimmed PPL scope.** R5 evaluates at 8K and 16K on `proof_pile.bin` but only at 8K on `test_pg19.bin` (the larger pg validation file would take ~30 minutes per eval on the RTX A6000 we settled on for that atom).
+* **No Jenga forward PPL evaluator.** The artifact's `ppl.py` uses the dense baseline Llama 2 with a LoRA adapter; it does not exercise the Jenga predictor or sparse path at inference. This blocked direct PPL comparisons for I1 and would have blocked I3 as well had we not written a separate measurement driver.
+* **OPT-1.3B substitution for I2.** The CNN versus MLP predictor comparison was forced to OPT-1.3B at sequence length 2048 because Llama 2 7B with `output_attentions=True` exceeds 48 GB GPU memory. The predictor head is model agnostic so the relative comparison still holds, but absolute MSE numbers do not transplant to Llama.
+* **Llama 3 8B hands on coverage is limited.** Llama 3 was downloaded on every pod that hosted training experiments but only used at inference in the segment ablation (Section 4.5). Reproductions for R1 to R6 used Llama 2 7B and OPT 1.3B as the primary scoped models.
+* **Skipped atoms.** R7 (predictor convergence Figure 16) was budget gated and not executed; we cite the paper directly.
+* **Hardware mix.** Reproduction ran on four different pods (A100 80GB SXM4, A100 80GB PCIe, RTX A6000, RTX 4090 48GB). Step time numbers in Section 4.2 are on the A100 80GB SXM4. Other measurements are on whichever pod ran them, noted per atom.
 
 ## 9. Conclusion
 
-One paragraph restating the reproduction findings and what the three extensions revealed about Jenga's design margin.
+We reproduce Jenga's headline memory and time savings to within 1% of the authors' shipped numbers on Llama 2 7B and OPT 1.3B, and confirm that the 2 to 5% perplexity premium it incurs is small relative to the 31 to 39% memory reduction it delivers. The extension experiments are mixed: a CNN attention predictor is decisively worse than the MLP under identical training; a runtime entropy heuristic modulates retention as designed but its downstream quality effect remains unmeasured for budget reasons; and a token merging variant of Jenga is the one extension whose memory and quality trade-off we measure directly against baseline Jenga. The reproduction supports the paper's central thesis that contextual token sparsity is a sound and largely accuracy-preserving memory optimization; the extensions illustrate that *naive* drop-in modifications to the predictor or the elimination step do not transplant from related literature without retraining the LoRA adapter alongside them, which is the natural next step.
 
 ## References
 
