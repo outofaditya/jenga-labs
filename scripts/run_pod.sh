@@ -79,11 +79,18 @@ case "$PYVER" in
       exit 1
     fi
     ENV_NAME="jenga"
-    ENV_BIN="$CONDA_BASE/envs/$ENV_NAME/bin"
-    if [ ! -x "$ENV_BIN/python" ]; then
+    ENV_PREFIX=$("$CONDA_BASE/bin/conda" info --envs 2>/dev/null | awk -v n="$ENV_NAME" '$1==n {print $NF}')
+    if [ -z "$ENV_PREFIX" ] || [ ! -x "$ENV_PREFIX/bin/python" ]; then
       log "Creating conda env $ENV_NAME (python 3.10) via $CONDA_BASE"
       "$CONDA_BASE/bin/conda" create -n "$ENV_NAME" -c conda-forge python=3.10 pip -y
+      ENV_PREFIX=$("$CONDA_BASE/bin/conda" info --envs 2>/dev/null | awk -v n="$ENV_NAME" '$1==n {print $NF}')
     fi
+    if [ -z "$ENV_PREFIX" ] || [ ! -x "$ENV_PREFIX/bin/python" ]; then
+      echo "[run_pod] failed to locate conda env $ENV_NAME after create" >&2
+      "$CONDA_BASE/bin/conda" info --envs >&2 || true
+      exit 1
+    fi
+    ENV_BIN="$ENV_PREFIX/bin"
     export PATH="$ENV_BIN:$PATH"
     log "Activated $ENV_NAME at $ENV_BIN with $(python --version 2>&1)"
     ;;
