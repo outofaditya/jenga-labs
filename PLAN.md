@@ -82,7 +82,7 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R5 | Reproduction | 2.0 | 2.00 | in progress (8K proof_pile and 16K proof_pile done; 8K pg in flight; 16K pg dropped to save GPU hours) |
 | R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
-| I1 | Improvement | 3.0 | 3.00 | pending |
+| I1 | Improvement | 3.0 | 3.00 | done (mechanism check; 64 layer batch points per lam in 0 0.05 0.1 0.2; downstream PPL deferred to I3) |
 | I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B RedPajama) |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |

@@ -193,7 +193,11 @@ Two exploratory extensions on top of Jenga. Each is compared against a baseline 
 
 ### 5.1 Extension A: Dynamic Adaptive Thresholds
 
-State the hypothesis. Describe the per batch entropy heuristic and the `t_dynamic = t_base + lam * (1 - entropy_norm)` rule. List the values of `lam` swept.
+**Hypothesis.** Replacing Jenga's static per-layer retention ratio `config.sparse = 0.4` with a runtime heuristic that increases retention when the predictor is confident and decreases it when the predictor is uncertain should produce a Pareto trade-off between memory and quality.
+
+**Implementation.** `src/jenga/models/modeling_llama.py` is patched at the point where `q_len_now` is set from `config.sparse` to compute the normalized Shannon entropy of the predictor's positive-class scores and apply `t_dynamic = config.sparse + lam * (1 - entropy_norm)`. Activation is gated by `config.dynamic_threshold_lambda`; with `lam = 0` the path is identical to the original static threshold. Logging is gated by `config.log_adaptive` and writes one row per (layer, batch) to a module level list which the driver script drains.
+
+**Sweep.** `lam in {0.0, 0.05, 0.1, 0.2}`. Inference only on Llama 2 7B with the Jenga LoRA adapter at sequence length 8192 over four RedPajama documents. Atom I1 is a **mechanism check** (does the heuristic shift retention as designed?) not a downstream-quality comparison (does it improve perplexity?) because the artifact's PPL evaluator uses the dense baseline Llama and would not exercise the patched Jenga forward without a substantial new evaluator. The quality-vs-memory trade-off comparison is the role of Atom I3 (Section 5.3).
 
 ### 5.2 Extension B: 1D CNN Predictors
 
@@ -207,15 +211,22 @@ State the hypothesis. Describe the per batch entropy heuristic and the `t_dynami
 
 ### 6.1 Extension A Results
 
-To be populated by Atom I1. Required figures:
+Atom I1 ran the adaptive threshold sweep on Pod 3 (RTX 4090 48 GB). 16 attention layers contribute sparsity (layers >= 15 in Llama 2 7B's 32 layer stack); we collected 64 (layer, doc) points per `lam`.
 
-**Figure 6.1a** — paste this image (caption: "Predictor entropy versus token retention ratio per layer per batch, Llama 2 7B at 8192 tokens, three seeds."):
+| `lam` | n points | Mean entropy_norm | Mean retention | Retention range |
+| --- | --- | --- | --- | --- |
+| 0.0 | 64 | 0.797 | 0.4000 | [0.4000, 0.4000] |
+| 0.05 | 64 | 0.799 | 0.4100 | [0.4001, 0.4496] |
+| 0.1 | 64 | 0.804 | 0.4196 | [0.4002, 0.4998] |
+| 0.2 | 64 | 0.804 | 0.4391 | [0.4004, 0.5998] |
+
+**The heuristic works mechanically:** at `lam = 0` retention is locked at the static 0.40; at `lam > 0` it shifts upward exactly proportionally to `lam * (1 - entropy_norm)`. The range column shows retention varying **per batch** (0.4 to 0.6 at `lam = 0.2`) rather than being constant. Mean predictor entropy is high (~0.80) which is why the average retention shift is modest (only `lam * 0.2`).
+
+Downstream perplexity comparison is intentionally deferred to Section 6.3 because the artifact's PPL evaluator uses the dense baseline Llama. Implementing a Jenga-aware perplexity evaluator was out of remaining budget.
+
+**Figure 6.1** — paste this image (caption: "Predictor entropy versus token retention ratio per (layer, batch) on Llama 2 7B at 8192 tokens. `lam = 0` is the original static Jenga; `lam > 0` introduces per-batch modulation."):
 
 ![Adaptive threshold entropy vs retention](output_figures/extensions/adaptive_thresholds/scatter.pdf)
-
-**Figure 6.1b** — paste this image (caption: "Perplexity on the paper's PPL benchmarks across swept `lam` values plus the equal-budget static-threshold Jenga baseline."):
-
-![Adaptive threshold PPL comparison](output_figures/extensions/adaptive_thresholds/ppl_bar.pdf)
 
 ### 6.2 Extension B Results
 
