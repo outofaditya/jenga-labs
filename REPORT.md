@@ -197,6 +197,10 @@ To test whether the inference time win amplifies when the LoRA weights are joint
 
 If the joint training row improves on the second, the additional gain is attributable to the LoRA weights specializing to the merged representation. If it instead matches or regresses, the inference time effect of Section 6.1 saturates the available headroom and joint training provides no additional benefit beyond avoiding the train/test distribution shift.
 
+![Training loss curve](output_figures/extensions/token_merging/train_loss.pdf)
+
+*Figure 7. LoRA adapter training loss with token merging enabled from the first optimizer step. Left, per logging step loss; right, the same trace overlaid with a ten step moving average to make the converged plateau legible.*
+
 ## 7. Discussion
 
 **What reproduced cleanly.** Every memory and time measurement matches the authors' shipped logs within approximately one percent on the same configurations. The memory savings scale with sequence length as the paper claims, the predictor overhead is the constant 656 MB the paper reports, and the LongLoRA "others" excess is the expected four GB. The perplexity sweep confirms the central trade off: Jenga pays 2 to 5 percent perplexity in return for 31 to 39 percent peak memory reduction and a 4 to 12 percent step time speedup.
