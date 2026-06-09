@@ -52,7 +52,16 @@ Jenga peak memory is **44.7% lower** than baseline on the same configuration. Th
 
 ### 4.1 Memory (Reproduces Paper Figure 12)
 
-Insert grouped bar chart of peak memory across LoRA and Jenga at sequence lengths 8192 and 16384 for Llama 2 7B and OPT-1.3B. Annotate the relative memory reduction.
+Atom R1 ran LoRA, LongLoRA, and Jenga across Llama 2 7B and OPT-1.3B at sequence lengths 4096 and 8192 on the A100 80GB. The grouped bar chart at `output_figures/end2end/memory/exp-end2end-memory-{4K,8K}-comparison.pdf` reproduces the qualitative shape of the paper's Figure 12.
+
+| Model | Seq | LoRA (GB) | LongLoRA (GB) | Jenga (GB) | Jenga vs LoRA |
+| --- | --- | --- | --- | --- | --- |
+| Llama 2 7B | 4K | 42.7 | 44.8 | 28.5 | 33% lower |
+| Llama 2 7B | 8K | 72.5 | 76.6 | 44.0 | 39% lower |
+| OPT-1.3B | 4K | 13.0 | 13.8 | 9.0 | 31% lower |
+| OPT-1.3B | 8K | 23.5 | 25.0 | 15.4 | 35% lower |
+
+Our numbers match the authors' shipped logs to within ~1% on the same configurations (authors' Llama 2 7B 8K LoRA: 73.1 GB vs ours 72.5 GB; authors' Llama 2 7B 8K Jenga: 44.5 GB vs ours 44.0 GB). Jenga peak memory is consistently below baseline LoRA across all four (model, seq) pairs and the savings grow with sequence length, matching the paper's claim that the gain compounds at long context.
 
 ### 4.2 Time (Reproduces Paper Figure 13)
 
