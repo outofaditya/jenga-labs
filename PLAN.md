@@ -61,7 +61,7 @@ A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimat
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| Hugging Face Llama gated access not granted in time | medium | Default to Llama 2 7B; Llama 3 8B is a stretch goal |
+| Hugging Face Llama 2 access still pending at boot | medium | Llama 3 access already granted; boot with `INCLUDE_LLAMA2=0` if Llama 2 has not approved yet, rerun the base model pull once it does |
 | flash attn build fails on Vast.ai image | medium | Pin `torch==2.1.2` with `cu121` and install `flash-attn==2.5.6 --no-build-isolation` |
 | Llama at 16384 OOMs on 80GB without gradient checkpointing | medium | Enable `gradient_checkpoint=True` on the baseline runs at 16K and disclose the asymmetry |
 | Jenga plus QLoRA crashes in `PrunedLlamaMLPFunction` due to `bnb.nn.Linear4bit` | high | Restrict 4 bit quantization to attention projections only on first pass |
@@ -99,7 +99,7 @@ A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimat
 
 These steps run on your laptop and on the Hugging Face web UI. They convert the slow Tsinghua artifact download into a fast CDN pull and remove all interactive prompts from the pod boot sequence.
 
-1. **Request Llama 2 access on Hugging Face.** Visit `huggingface.co/meta-llama/Llama-2-7b-hf` while signed in and submit the access form. Approval is typically minutes to a day. Llama 3 8B optional.
+1. **Hugging Face gated access.** Llama 3 access already granted. Request Llama 2 access at `huggingface.co/meta-llama/Llama-2-7b-hf` if not yet pending; without it run_pod.sh must be invoked with `INCLUDE_LLAMA2=0` until approval lands.
 2. **Download the Tsinghua zips locally.** From `README.md`: `peft_model.zip` and `predictor.zip` under "Model Weights"; `dataset.zip` under "Datasets". Unzip them on your laptop.
 3. **Create a private Hugging Face dataset.** Suggested id `<your_username>/jenga-labs-artifacts`. Push the pre extracted contents so the dataset tree contains:
 

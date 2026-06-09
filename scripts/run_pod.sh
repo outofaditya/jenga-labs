@@ -14,7 +14,7 @@
 #   REPO_DIR             /workspace/jenga-labs
 #   REPO_URL             https://github.com/outofaditya/jenga-labs.git
 #   INCLUDE_LLAMA2       1   set to 0 to skip the Llama 2 7B pull
-#   INCLUDE_LLAMA3       0   set to 1 to attempt Llama 3 8B (requires gated access)
+#   INCLUDE_LLAMA3       1   set to 0 to skip Llama 3 8B (gated access required)
 #   INCLUDE_OPT_350M     1
 #   INCLUDE_OPT_1_3B     1
 #   INCLUDE_OPT_2_7B     0
@@ -32,7 +32,7 @@ set -euo pipefail
 REPO_DIR="${REPO_DIR:-/workspace/jenga-labs}"
 REPO_URL="${REPO_URL:-https://github.com/outofaditya/jenga-labs.git}"
 INCLUDE_LLAMA2="${INCLUDE_LLAMA2:-1}"
-INCLUDE_LLAMA3="${INCLUDE_LLAMA3:-0}"
+INCLUDE_LLAMA3="${INCLUDE_LLAMA3:-1}"
 INCLUDE_OPT_350M="${INCLUDE_OPT_350M:-1}"
 INCLUDE_OPT_1_3B="${INCLUDE_OPT_1_3B:-1}"
 INCLUDE_OPT_2_7B="${INCLUDE_OPT_2_7B:-0}"
