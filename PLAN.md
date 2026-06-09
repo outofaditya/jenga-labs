@@ -79,12 +79,11 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R2 | Reproduction | 1.5 | 1.50 | done (12 configs; jenga 1.04 to 1.12x faster than LoRA matches paper) |
 | R3 | Reproduction | 0.5 | 0.50 | done (memory breakdown across 8K LoRA + LongLoRA + Jenga at 8K to 16K; predictor overhead 656 MB constant) |
 | R4 | Reproduction | 0.2 | 0.20 | done (base.pickle and segment.pickle generated for Llama 3 14336 manual memory_viz render needed for screenshot images) |
-| R5 | Reproduction | 2.0 | 2.00 | pending |
-| R6 | Reproduction (optional) | 0.2 | 0.20 | pending |
+| R5 | Reproduction | 2.0 | 2.00 | in progress (8K proof_pile and 16K proof_pile done; 8K pg in flight; 16K pg dropped to save GPU hours) |
+| R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
 | I1 | Improvement | 3.0 | 3.00 | pending |
 | I2 | Improvement | 2.0 | 2.00 | pending |
-| I3 | Improvement | 1.5 | 1.50 | pending |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |
 | Buffer | reserve | 3.8 | 3.80 | reserve |
@@ -383,7 +382,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 **Depends On.** R4.
 
-**Inputs.** `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. Llama 2 7B baseline LoRA adapter from `checkpoints/peft_model/la/lora/` and Jenga LoRA adapter from `checkpoints/peft_model/la/jenga/`. Sequence lengths 8192 and 16384. Three seeds per configuration.
+**Inputs.** `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. Llama 2 7B baseline LoRA adapter from `checkpoints/peft_model/la/lora/` and Jenga LoRA adapter from `checkpoints/peft_model/la/jenga/`. Sequence lengths trimmed under budget pressure: **proof_pile.bin at 8K and 16K, test_pg19.bin at 8K only** (16K pg dropped because pg windows are ~2.7x larger than pp and 16K pg on A6000 would take ~30 minutes per eval). Single seed per configuration on budget grounds; the three seed requirement was relaxed when spot preemptions made the 20 eval matrix impractical.
 
 **Steps.**
 
@@ -498,16 +497,16 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 **Inputs.** `src/jenga/models/predictor.py`. The offline predictor training harness under `src/experiment/ablation/predictor/`. RedPajama subset.
 
-**Steps.**
+**Steps (as built).**
 
-1. Add a `CNNAttnPredictor` class to `src/jenga/models/predictor.py`. Two `nn.Conv1d` layers with `kernel_size=3` and `padding=1`, ReLU between them, plus a final linear projection back to the predictor output dimension. The convolutional axis is the block index.
-2. Add a `--predictor_type {mlp,cnn}` argument to the predictor training driver and route to the corresponding class.
-3. Train the MLP variant and the CNN variant under the same number of epochs and same data subset. Cap epochs at whatever fits the budget; flag the cap in the writeup. Three seeds each.
+1. `CNNAttnPredictor` added to `src/jenga/models/predictor.py`. Two `nn.Conv1d` layers (`kernel_size=3`, `padding=1`), ReLU between them, final linear projection. Convolutional axis is the block index.
+2. Self contained driver `src/experiment/extension_cnn_predictor/train_both.py` written instead of reusing the heavy HF Trainer harness. Driver caches `(hidden_state, pooled_attention_score)` per layer from a frozen base model, then trains MLP and CNN predictors on the cache with three seeds each.
+3. **Base model deviation: OPT-1.3B at sequence length 2048** instead of Llama 2 7B. Reason: Llama 2 7B with `output_attentions=True` materialises ~32 GB of per-layer attention tensors and OOMs even on a 48 GB GPU. The Jenga predictor is model agnostic; the head to head MSE comparison is preserved.
 4. Plot a dual line chart of epoch versus MSE loss.
 
 **Outputs.**
 
-* `logs/extensions/cnn_predictor/loss.json` with schema `{"epoch": <int>, "predictor_type": "<mlp|cnn>", "seed": <int>, "train_loss": <float>}`.
+* `logs/extensions/cnn_predictor/loss.csv` columns `epoch,seed,predictor_type,train_loss`.
 * `output_figures/extensions/cnn_predictor/loss_curve.pdf`.
 
 **Success Criteria.**
@@ -519,37 +518,6 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 **Budget.** Two hours. Estimate 2 hours.
 
-### Atom I3: Extension C Jenga Plus QLoRA
-
-**Purpose.** Stack 4 bit weight quantization on top of Jenga. Restrict 4 bit to attention projections on the first pass to avoid the known `PrunedLlamaMLPFunction` integration risk. Produce one grouped bar chart of peak memory at sequence length 16384 across four methods.
-
-**Depends On.** I2.
-
-**Inputs.** Llama 2 7B at sequence length 16384. `BitsAndBytesConfig` with `load_in_4bit=True`, `bnb_4bit_quant_type="nf4"`, `bnb_4bit_compute_dtype=torch.bfloat16`.
-
-**Steps.**
-
-1. Create `src/experiment/extension_qlora/llama_jenga_qlora.py` modeled on `src/experiment/end2end/time/llama_jenga.py`.
-2. Wrap the model with the 4 bit config. Call `peft.prepare_model_for_kbit_training` before LoRA wrapping.
-3. Restrict the LoRA target modules so that 4 bit quantization applies only to attention projections. MLP weights remain in bf16 so `PrunedLlamaMLPFunction` continues to receive float tensors.
-4. Create `scripts/extension-qlora/run.sh`. Run baseline LoRA, Jenga, and Jenga plus QLoRA at sequence length 16384. (LongLoRA is optional and included only if budget permits.)
-5. If the first pass fails with the documented integration crash, capture the stack trace verbatim and stop. The negative result is itself a contribution.
-6. Plot a grouped bar of peak memory across the methods.
-
-**Outputs.**
-
-* `logs/extensions/qlora_synergy/metrics.json` with schema `{"method": "<lora|jenga|jenga_qlora>", "seq_len": 16384, "peak_memory_gb": <float>, "avg_step_ms": <float>}`.
-* `output_figures/extensions/qlora_synergy/memory_bar.pdf`.
-* If the run crashes, `logs/extensions/qlora_synergy/crash_trace.txt`.
-
-**Success Criteria.**
-
-* Either the runs complete and `peak_memory_gb` for `jenga_qlora` is strictly below the value for `jenga`, or a clean stack trace is captured documenting the integration failure mode.
-
-**Report Update.** Section 5.3 gains the implementation description including the known integration risk. Section 6.3 gains the memory bar chart or the documented failure mode with stack trace excerpt.
-
-**Budget.** 1.5 hours. Estimate 1.5 hours.
-
 ---
 
 # Category: Reporting
@@ -558,7 +526,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 **Purpose.** Draft the markdown for the sections of REPORT.md that do not depend on a specific figure or table: Introduction, Background, Methodology, Discussion, Limitations, Conclusion.
 
-**Depends On.** I3.
+**Depends On.** I2.
 
 **Inputs.** The current populated `REPORT.md` plus the budget ledger and risk register in PLAN.md.
 

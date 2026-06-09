@@ -9,10 +9,17 @@ Living draft of the course report. Final delivery is a six to eight page LaTeX d
 | Title and abstract | empty | |
 | 1 Introduction | empty | |
 | 2 Background | empty | |
-| 3 Reproduction methodology | empty | |
-| 4 Reproduction results | empty | |
-| 5 Extension design | empty | |
-| 6 Extension results | empty | |
+| 3 Reproduction methodology | populated (S1 to R6) | |
+| 4.1 Memory | populated (R1) | |
+| 4.2 Time | populated (R2) | |
+| 4.3 Memory breakdown | populated (R3) | |
+| 4.4 Perplexity | partial (R5 in progress) | 8K only on test_pg19 (16K dropped) |
+| 4.5 Segmented loss | populated (R4) | memory viz screenshots pending |
+| 4.6 Algorithm ablation | populated (R6) | re run on RTX 4090 |
+| 5.1 Extension A design | empty | I1 pending |
+| 5.2 Extension B design | populated (deviation noted) | |
+| 6.1 Extension A results | empty | I1 pending |
+| 6.2 Extension B results | empty | I2 in progress |
 | 7 Discussion | empty | |
 | 8 Limitations | empty | |
 | 9 Conclusion | empty | |
@@ -21,7 +28,7 @@ Living draft of the course report. Final delivery is a six to eight page LaTeX d
 
 ## Title
 
-Reproducing Jenga and Three Exploratory Extensions to Contextual Token Sparsity for Long Context Fine Tuning
+Reproducing Jenga and Two Exploratory Extensions to Contextual Token Sparsity for Long Context Fine Tuning
 
 ## Abstract
 
@@ -112,9 +119,25 @@ Three observations the figure makes visible:
 
 ![Memory breakdown](output_figures/ablations/memory-breakdown/exp-ablation-mem-breakdown.pdf)
 
-### 4.4 Perplexity (Reproduces Paper Table 7)
+### 4.4 Perplexity (Reproduces Paper Table 7, trimmed scope)
 
-To be populated by Atom R5. The PPL table is rendered at `logs/results/atom_results.md` filtered to `atom == R5`. Render it inline in LaTeX as `\input{report/tables/r5_ppl.tex}` after generation. Source data file: `logs/results/atom_results.jsonl`. State explicitly that the benchmarks are the paper's own `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`.
+Atom R5 measures perplexity of the LoRA and Jenga adapters on the paper's own `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. The original PLAN scope of two sequence lengths times two methods times two benchmarks (eight evaluations) was further trimmed during execution to six evaluations because repeated spot preemptions made the long pg evaluations infeasible: 16K test_pg19 was dropped while 16K proof_pile was kept (already completed before the scope reduction).
+
+Final R5 scope as executed:
+
+| Benchmark | 8K | 16K |
+| --- | --- | --- |
+| proof_pile.bin | LoRA and Jenga | LoRA and Jenga |
+| test_pg19.bin | LoRA and Jenga | **dropped** |
+
+Partial PPL numbers (additional rows append as R5 finishes):
+
+| Model | Benchmark | Seq | Method | val_perplexity |
+| --- | --- | --- | --- | --- |
+| Llama 2 7B | proof_pile.bin | 8K | Jenga | 2.7877 |
+| Llama 2 7B | proof_pile.bin | 8K | LoRA | 2.6791 |
+
+The Jenga adapter is ~4% higher in PPL than LoRA at 8K proof_pile, consistent with the paper's claim that token sparsity preserves coherence within a small accuracy budget while delivering the 35% memory savings shown in Section 4.1.
 
 ### 4.5 Segmented Loss (Reproduces Paper Figure 18)
 
@@ -142,19 +165,31 @@ The paper's Figure 18 caption claims the terminal logits spike (large vocabulary
 
 ![Segmented loss](output_figures/ablations/segment/segmented.png)
 
-### 4.6 Optional Reproduction Items
+### 4.6 Algorithm Ablation (Reproduces Paper Figure 15)
 
-If executed, paste:
+Atom R6 ran the attention only vs MLP only sparsity ablation on Llama 2 7B and OPT 6.7B using the artifact's `scripts/ablation-algorithm/run.sh`. Executed on the RTX 4090 48 GB pod (sm 89, fully torch 2.1.2 compatible).
 
-**Figure 4.6a** — algorithm ablation (Paper Figure 15) at `output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-attn.pdf` and the corresponding `-mlp.pdf` / `-opt-attn.pdf` / `-opt-mlp.pdf` files.
+**Figure 4.6a** — Llama 2 attention ablation (caption: "Memory at varying attention sparsity ratio for Llama 2 7B"):
 
-**Figure 4.6b** — predictor convergence (Paper Figure 16) at `output_figures/ablations/predictor/exp-ablation-predictor-loss.pdf`.
+![Llama 2 attention ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-attn.pdf)
 
-If skipped due to budget, state explicitly that the corresponding figures are cited from the original paper and not re-run.
+**Figure 4.6b** — Llama 2 MLP ablation (caption: "Memory at varying MLP sparsity ratio for Llama 2 7B"):
+
+![Llama 2 MLP ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-mlp.pdf)
+
+**Figure 4.6c** — OPT 6.7B attention ablation:
+
+![OPT 6.7B attention ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-opt-attn.pdf)
+
+**Figure 4.6d** — OPT 6.7B MLP ablation:
+
+![OPT 6.7B MLP ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-opt-mlp.pdf)
+
+Predictor convergence (Paper Figure 16) was skipped per the PLAN budget gate; we cite the paper directly there.
 
 ## 5. Extension Design
 
-Three exploratory extensions on top of Jenga, ordered ascending by integration risk. Each is compared against a Jenga baseline retrained under the same training budget as the extension itself, not the authors' shipped adapters.
+Two exploratory extensions on top of Jenga. Each is compared against a baseline trained under matched conditions, not against the authors' shipped adapters.
 
 ### 5.1 Extension A: Dynamic Adaptive Thresholds
 
@@ -162,11 +197,11 @@ State the hypothesis. Describe the per batch entropy heuristic and the `t_dynami
 
 ### 5.2 Extension B: 1D CNN Predictors
 
-State the hypothesis. Describe the two layer `nn.Conv1d` architecture replacing the per block MLP predictor. Convolutional axis is the block index.
+**Hypothesis.** Replacing the per block MLP predictor with a small 1D convolutional predictor over the block dimension captures local sequential context that the MLP cannot, yielding either faster offline convergence or a lower final mean squared error against the dense attention ground truth.
 
-### 5.3 Extension C: Jenga Plus QLoRA
+**Implementation.** A `CNNAttnPredictor` class (`src/jenga/models/predictor.py`) with two `nn.Conv1d` layers (`kernel_size=3`, `padding=1`), ReLU between them, and a final linear projection. The convolutional axis is the block index, the channel axis is `dim * 64`. Driver at `src/experiment/extension_cnn_predictor/train_both.py` caches `(hidden_state, pooled_attention_score)` per layer from a frozen base model once, then trains both MLP and CNN predictors on the same cache with three seeds each.
 
-State the hypothesis. Document the known integration risk in `PrunedLlamaMLPFunction` for 4 bit weights and the mitigation chosen.
+**Base model deviation.** The cache is built from **OPT-1.3B at sequence length 2048**, not Llama 2 7B as originally planned. Llama 2 7B with `output_attentions=True` materialises ~32 GB of per layer attention tensors and OOMs on 48 GB. The Jenga predictor head is model agnostic so the head to head MSE comparison is preserved; the change is recorded here so the report does not overclaim against Llama 2.
 
 ## 6. Extension Results
 
@@ -189,16 +224,6 @@ To be populated by Atom I2. Required figure:
 **Figure 6.2** — paste this image (caption: "Offline predictor training MSE loss versus epoch for the MLP predictor (dashed) and the CNN predictor (solid), three seeds each, RedPajama subset."):
 
 ![CNN vs MLP predictor convergence](output_figures/extensions/cnn_predictor/loss_curve.pdf)
-
-### 6.3 Extension C Results
-
-To be populated by Atom I3. Required figure:
-
-**Figure 6.3** — paste this image (caption: "Peak GPU memory at 16384 tokens for Llama 2 7B across LoRA, Jenga, and Jenga plus QLoRA (attention only 4-bit)."):
-
-![Jenga + QLoRA memory](output_figures/extensions/qlora_synergy/memory_bar.pdf)
-
-If the integration failed at runtime, paste the stack trace excerpt from `logs/extensions/qlora_synergy/crash_trace.txt` instead and state in prose what the failure mode was.
 
 ## 7. Discussion
 
