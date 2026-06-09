@@ -1,269 +1,552 @@
 # PLAN.md
 
-Reproduction and Extension Plan for the Jenga paper. Course deliverable: one 6 to 8 page LaTeX report. Deadline four weeks from start. Hardware A100 80GB rented on Vast.ai or RunPod. Initial budget approximately twenty dollars with top up authorized for promising directions.
+Reproduction and extension plan for the Jenga paper. Course deliverable: one six to eight page LaTeX report. Deadline four weeks from start. Hardware A100 80GB rented on Vast.ai or RunPod. Initial budget approximately twenty dollars with top up authorized for promising directions.
+
+## Workflow
+
+* The plan is decomposed into **atoms**. Each atom is a single independent testable unit producing one figure, one table, one sanity check, or one report section. Within an atom the executing agent breaks the work into TaskCreate items that tick off as they finish.
+* Atoms execute one at a time in the strict order declared here. Hard prerequisites are listed in each atom under **Depends On**. Skipping an atom is allowed only if it is explicitly marked optional.
+* At the close of each atom `REPORT.md` is updated with the content that atom produced before the next atom begins.
 
 ## Operating Principles
 
-1. **Reuse the existing pipeline.** This repository already ships the training drivers, profiling trainers, plotting scripts, and authors' raw logs. New scripts are written only where the existing surface does not cover the experiment.
-2. **Local checkpoint paths.** All model loads point at `checkpoints/<model>/` (matching the existing shell scripts) rather than Hugging Face hub strings.
-3. **Authors' shipped artifacts.** The provided `checkpoints/predictor/predictor.pth`, `checkpoints/predictor/pruned_config.pth`, and `checkpoints/peft_model/` adapters are used as is for the reproduction phase. Retraining the predictor is optional and budget gated (see Part 2).
+1. **Reuse the existing pipeline.** This repository already ships training drivers, profiling trainers, plotting scripts, and authors' raw logs. New scripts are written only where the existing surface does not cover the experiment.
+2. **Local checkpoint paths.** All model loads point at `checkpoints/<model>/` rather than Hugging Face hub strings.
+3. **Authors' shipped artifacts.** The provided `checkpoints/predictor/predictor.pth`, `checkpoints/predictor/pruned_config.pth`, and `checkpoints/peft_model/` adapters are used as is for the reproduction phase.
 4. **Naming.** The system is "Jenga". Avoid "JENGA" and marketing language in artifacts that feed the report.
-5. **Fairness rule for extensions.** Every extension in Part 3 is compared against a Jenga baseline retrained under the same training budget as the extension itself. Comparing an extension trained for a few hundred steps against the authors' fully trained adapters is rejected as unfair to the extension.
+5. **Fairness rule for extensions.** Every extension in the Improvement category is compared against a Jenga baseline retrained under the same training budget as the extension itself, not the authors' shipped adapters.
 
 ## Measurement Rigor
 
-* **Warmup.** Five forward and backward passes before any logging to absorb CUDA initialization, allocator caching, and bf16 kernel autotuning.
-* **Steps Measured.** Thirty to fifty measured steps per memory or time configuration. Report mean and standard deviation rather than a single average.
-* **Seeds.** Single seed acceptable for memory and time profiling. Three seeds required for any accuracy claim (perplexity, retention ratios, predictor loss curves) so the report can carry error bars.
-* **Pod Hygiene.** Bring up one long lived Vast.ai pod, install once, download data and checkpoints once, snapshot the image. Tear down only after the final run. Boot and download time is paid GPU time.
-
-## First Kill Criterion
-
-Before any Llama run is paid for, the following must pass on OPT-350m at sequence length 8192:
-
-1. Baseline LoRA training step completes without NaN loss for ten steps.
-2. Jenga training step completes without NaN loss for ten steps.
-3. Jenga peak memory is strictly below baseline peak memory.
-
-If any of the three fails the environment is broken and further spending is paused until it is fixed.
+* **Warmup.** Five forward and backward passes before any logging.
+* **Steps Measured.** Thirty to fifty measured steps per memory or time configuration. Report mean and standard deviation.
+* **Seeds.** Single seed acceptable for memory and time profiling. Three seeds required for any accuracy claim.
+* **Pod Hygiene.** One long lived Vast.ai pod, install once, download data and checkpoints once, snapshot the image. Boot and download time is paid GPU time.
 
 ## Budget Ledger
 
-| Phase | Est A100 80GB Hours | Est Cost USD | Status |
-| --- | --- | --- | --- |
-| Part 0 sanity | 0.5 | 0.50 | pending |
-| Part 1 reproduction | 6 | 6 | pending |
-| Part 2 ablations | 3 | 3 | pending |
-| Part 3 extensions | 8 | 8 | pending |
-| Buffer | 2.5 | 2.50 | reserve |
-| **Total** | **20** | **20** | |
+| Atom | Phase | Est A100 80GB Hours | Est Cost USD | Status |
+| --- | --- | --- | --- | --- |
+| S1 | Setup | 0.5 | 0.50 | pending |
+| S2 | Setup | 0.1 | 0.10 | pending |
+| S3 | Setup | 0 | 0 | pending |
+| S4 | Setup | 0.2 | 0.20 | pending |
+| R1 | Reproduction | 1.5 | 1.50 | pending |
+| R2 | Reproduction | 1.5 | 1.50 | pending |
+| R3 | Reproduction | 0.5 | 0.50 | pending |
+| R4 | Reproduction | 0.2 | 0.20 | pending |
+| R5 | Reproduction | 2.0 | 2.00 | pending |
+| R6 | Reproduction (optional) | 0.2 | 0.20 | pending |
+| R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
+| I1 | Improvement | 3.0 | 3.00 | pending |
+| I2 | Improvement | 2.0 | 2.00 | pending |
+| I3 | Improvement | 1.5 | 1.50 | pending |
+| P1 | Reporting | 0 | 0 | pending |
+| P2 | Reporting | 0 | 0 | pending |
+| Buffer | reserve | 3.8 | 3.80 | reserve |
+| **Total** | | **20.0** | **20.00** | |
 
-A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimate. Update this table with actual hours and cost at the end of each part.
+A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimate. Update the table with actual hours and dollars at the end of each atom.
 
 ## Timeline
 
-| Week | Focus |
+| Week | Atoms in Scope |
 | --- | --- |
-| 1 | Environment, Part 0, Part 1 baseline and Jenga end to end |
-| 2 | Part 1 perplexity, Part 2 ablations |
-| 3 | Part 3 extensions in order 3.1 then 3.2 then 3.3, plus sensitivity sweeps |
-| 4 | Report drafting, figure polish, final readthrough |
-
-Five days at the end of week four are reserved for the report. No new experiment is started in week four unless it directly fills a gap the writeup already opened.
+| 1 | S1 S2 S3 S4 R1 R2 |
+| 2 | R3 R4 R5 R6 (optional R7) |
+| 3 | I1 I2 I3 |
+| 4 | P1 P2 |
 
 ## Risk Register
 
 | Risk | Likelihood | Mitigation |
 | --- | --- | --- |
-| Hugging Face Llama gated access not granted in time | medium | Default to Llama 2 7B for which access is already requestable; Llama 3 8B is a stretch goal not the hero |
-| flash attn build fails on Vast.ai image | medium | Pin `torch==2.1.2` with `cu121` and install `flash-attn==2.5.6 --no-build-isolation`; fall back to attn implementation eager if rebuild fails |
-| Llama at 16384 OOMs on 80GB without gradient checkpointing | medium | Enable `gradient_checkpoint=True` on the baseline runs at 16K and disclose the asymmetry in the report |
-| Jenga plus QLoRA crashes in `PrunedLlamaMLPFunction` because `bnb.nn.Linear4bit` is not a float tensor | high | Restrict 4 bit quantization to attention projections; leave MLP in bf16 for the first pass |
-| Tsinghua cloud links throttle from outside China | high | Mirror `dataset.zip`, `peft_model.zip`, and `predictor.zip` to a personal Hugging Face dataset on first download and pull from there afterwards |
+| Hugging Face Llama gated access not granted in time | medium | Default to Llama 2 7B; Llama 3 8B is a stretch goal |
+| flash attn build fails on Vast.ai image | medium | Pin `torch==2.1.2` with `cu121` and install `flash-attn==2.5.6 --no-build-isolation` |
+| Llama at 16384 OOMs on 80GB without gradient checkpointing | medium | Enable `gradient_checkpoint=True` on the baseline runs at 16K and disclose the asymmetry |
+| Jenga plus QLoRA crashes in `PrunedLlamaMLPFunction` due to `bnb.nn.Linear4bit` | high | Restrict 4 bit quantization to attention projections only on first pass |
+| Tsinghua cloud links throttle from outside China | high | Mirror archive contents to a personal Hugging Face dataset on first download |
 | Single seed gives spurious improvement signal | medium | All accuracy comparisons run at three seeds |
+
+## Atom Template
+
+```
+### Atom X.Y: Short Name
+
+**Purpose.** One sentence on what this atom proves or produces.
+**Depends On.** List of prior atoms or none.
+**Inputs.** Files, configs, models, sequence lengths.
+**Steps.** Numbered concrete actions an agent can execute without further interpretation.
+**Outputs.** Files written and their JSON or figure schema.
+**Success Criteria.** Testable assertions.
+**Report Update.** Which REPORT.md section receives what content at the end.
+**Budget.** Estimated A100 80GB hours and dollars.
+```
 
 ---
 
-## Part 0: Free Sanity Check
+# Category: Setup
 
-**Objective.** Validate environment installation and regenerate every paper figure for free from authors' shipped logs before paying any GPU time.
+### Atom S1: Pod and Environment Bootstrap
+
+**Purpose.** Stand up a long lived A100 80GB pod with the exact software pins the artifact requires and stage all model weights and datasets locally so that no subsequent atom pays for downloads.
+
+**Depends On.** None.
+
+**Inputs.** Vast.ai or RunPod A100 80GB image preloaded with CUDA 12.1. The artifact's `requirements.txt`. The download links in `README.md` for `peft_model.zip`, `predictor.zip`, and `dataset.zip`. Hugging Face account with at least Llama 2 access requested.
 
 **Steps.**
 
-1. Install per `README.md`:
-   * `pip install -r requirements.txt`
-   * `pip install flash-attn --no-build-isolation`
-   * `pip install -e .`
-2. Stage checkpoints and dataset per `README.md` layout. Mirror to a personal Hugging Face dataset on first download.
-3. Run `bash hello-world.sh` on the GPU pod. Confirm the printed checks pass.
-4. Run `bash RUNME-a.sh` on CPU (no GPU needed). This regenerates the full `output_figures/` tree from `logs/` in roughly two minutes and gives the visual ground truth that every fresh run is compared against.
+1. Provision one A100 80GB pod. Image base PyTorch 2.1.x with CUDA 12.1 if available, else Ubuntu 22.04.
+2. Clone the repository onto the pod and `cd` into it.
+3. `pip install -r requirements.txt`
+4. `pip install flash-attn --no-build-isolation`
+5. `pip install -e .`
+6. Download `peft_model.zip`, `predictor.zip`, `dataset.zip` from the Tsinghua links in `README.md`. Unzip into `checkpoints/peft_model`, `checkpoints/predictor`, and `dataset/` respectively.
+7. Download base models from Hugging Face into `checkpoints/llama2`, `checkpoints/opt-350m`, `checkpoints/opt-1.3b`, `checkpoints/opt-6.7b`. `checkpoints/llama3` is optional if access has landed.
+8. Mirror the unzipped archives to a personal Hugging Face dataset for future pods.
+9. Snapshot the pod image.
 
-**Output.** A populated `output_figures/` tree matching the paper.
+**Outputs.** A pod whose `checkpoints/` and `dataset/` trees match the layout described in `README.md`. A snapshot ID recorded in `REPORT.md` Appendix B.
+
+**Success Criteria.**
+
+* `python -c "import torch; print(torch.cuda.is_available())"` prints `True`.
+* `python -c "import flash_attn; import jenga"` exits with code zero.
+* `ls checkpoints/llama2/config.json`, `ls checkpoints/predictor/predictor.pth`, and `ls dataset/PPL/proof_pile.bin` all exist.
+
+**Report Update.** Appendix B Software Environment is populated with the pin list and the snapshot ID.
+
+**Budget.** Roughly 30 to 60 minutes of GPU time mostly on downloads. Estimate 0.5 hours.
+
+### Atom S2: Pipeline Smoke Test
+
+**Purpose.** Confirm that Jenga's forward and backward pass works end to end on the pod with the shipped predictor weights before any expensive run.
+
+**Depends On.** S1.
+
+**Inputs.** `hello-world.sh` at repo root. The Llama 2 checkpoint and the shipped predictor.
+
+**Steps.**
+
+1. Run `bash hello-world.sh`.
+
+**Outputs.** Console log captured to `logs/setup/hello_world.log`.
+
+**Success Criteria.**
+
+* The script prints "Environment compatibility and Jenga functionality test PASSED."
+* No CUDA OOM, no NaN loss in the test forward and backward pass.
+
+**Report Update.** None.
+
+**Budget.** Approximately 30 seconds of GPU time. Estimate 0.1 hours including overhead.
+
+### Atom S3: Plot Only Reproduction From Shipped Logs
+
+**Purpose.** Regenerate every paper figure for free from the authors' shipped `logs/` tree so we have the visual ground truth that every fresh GPU run is compared against.
+
+**Depends On.** S1.
+
+**Inputs.** `RUNME-a.sh` at repo root. The `logs/` tree shipped with the artifact.
+
+**Steps.**
+
+1. Run `bash RUNME-a.sh` on the pod (CPU is sufficient).
+
+**Outputs.** A populated `output_figures/` tree matching the figure-to-folder mapping in `README.md`.
+
+**Success Criteria.**
+
+* `output_figures/end2end/memory/` and `output_figures/end2end/time/` each contain at least one PDF.
+* `output_figures/ablations/algorithm/`, `ablations/memory-breakdown/`, `ablations/time-breakdown/`, `extension/2d/`, `extension/offload/`, `scalability/` are all non empty.
+
+**Report Update.** None. These figures serve only as the visual baseline against which fresh runs are visually compared.
+
+**Budget.** No GPU time. Estimate 0 hours.
+
+### Atom S4: First Kill Criterion on OPT-350m
+
+**Purpose.** Smallest possible end to end gate. Confirms that the baseline LoRA driver and the Jenga driver both train without NaNs and that Jenga's peak memory is strictly below the baseline at 8192 tokens on OPT-350m. Stops all further spending if any of the three fails.
+
+**Depends On.** S2.
+
+**Inputs.** `scripts/end2end-memory/opt-base.sh` and `scripts/end2end-memory/opt-jenga.sh`. Model `opt-350m`. Sequence length 8192.
+
+**Steps.**
+
+1. `bash scripts/end2end-memory/opt-base.sh opt-350m 8192`
+2. `bash scripts/end2end-memory/opt-jenga.sh opt-350m 8192`
+3. Read the two resulting log files under `logs/end2end/memory/`.
+4. Extract the peak memory line from each run.
+
+**Outputs.** `logs/end2end/memory/opt-base/opt-350m_8192.log` and `logs/end2end/memory/opt-jenga/opt-350m_8192.log`. A one line summary appended to `logs/setup/first_kill.txt` with the two peak memory numbers.
+
+**Success Criteria.**
+
+* Both runs complete the configured number of steps without NaN loss.
+* The Jenga peak memory in GB is strictly less than the baseline peak memory in GB. If equal or higher, this atom fails and execution halts pending diagnosis.
+
+**Report Update.** Section 3 Reproduction Methodology gains a one line note confirming the first kill criterion passed and citing the two peak memory numbers.
+
+**Budget.** Approximately 10 minutes of GPU time. Estimate 0.2 hours.
 
 ---
 
-## Part 1: End to End Reproduction
+# Category: Reproduction
 
-**Objective.** Measure peak memory, step time, and perplexity for baseline LoRA and Jenga across two sequence lengths and confirm the qualitative shape of Figures 12 and 13 and Table 7 of the paper.
+### Atom R1: Figure 12 End to End Memory Footprint
 
-**Primary models.** `checkpoints/llama2` (Llama 2 7B) and `checkpoints/opt-1.3b`. `checkpoints/llama3` is promoted into scope only if access lands in week one.
+**Purpose.** Reproduce the paper's Figure 12 grouped bar comparison of peak memory across LoRA, LongLoRA, and Jenga at a representative subset of models and sequence lengths.
 
-**Sequence lengths.** 8192 and 16384.
+**Depends On.** S4.
 
-**Hyperparameters.** From the existing shell scripts: `pool_size=64`, `thresh=0.4`, `bf16`, LoRA r=8 alpha=16 on q k v o projections, AdamW (`adamw_torch`) with FP32 optimizer states, `gradient_accumulation_steps=1`, batch size one per device. Linear RoPE scaling applied automatically by `set_RoPE` in the existing drivers.
+**Inputs.**
 
-### 1.1 Baseline LoRA Reference Numbers
+* Models: `checkpoints/llama2` and `checkpoints/opt-1.3b`.
+* Sequence lengths: 4096 and 8192.
+* Methods: `llama-base.sh`, `llama-llora.sh`, `llama-jenga.sh` for Llama 2 and the matching OPT scripts.
 
-* Use `scripts/end2end-memory/llama-base.sh` and `scripts/end2end-time/llama-base.sh` (and the corresponding `opt-base.sh`).
-* Driver: `src/experiment/end2end/memory/llama_base.py` and `src/experiment/end2end/time/llama_base.py`.
-* Model class: `jenga.models.modeling_llama_base.LlamaForCausalLM`.
-* Enable `--gradient_checkpoint True` for Llama at 16384 to avoid OOM. Disclose the asymmetry in the report.
+**Steps.**
 
-### 1.2 Jenga End to End
+1. For each `(model, seq_len, method)` in the cross product of `{llama2, opt-1.3b}` × `{4096, 8192}` × `{base, llora, jenga}` run the corresponding `scripts/end2end-memory/<model_family>-<method>.sh <model> <seq_len>`. Enable `gradient_checkpoint True` on baseline LoRA at 8192 if it OOMs.
+2. Confirm each run wrote a log to `logs/end2end/memory/<method>/<model>_<seq_len>.log`.
+3. Run `python src/experiment/end2end/memory/plot_comparison_4k.py` and `python src/experiment/end2end/memory/plot_comparison_8k.py`.
 
-* Use `scripts/end2end-memory/llama-jenga.sh` and `scripts/end2end-time/llama-jenga.sh` (and `opt-jenga.sh`).
-* Driver: `src/experiment/end2end/memory/llama_jenga.py` and `src/experiment/end2end/time/llama_jenga.py`.
-* Model class: `jenga.models.modeling_llama.LlamaForCausalLM`.
-* Authors' predictor weights loaded via the existing `torch.load` and `state_dict.copy_` pattern. Do not retrain the predictor here.
+**Outputs.**
 
-### 1.3 Perplexity
+* Twelve log files under `logs/end2end/memory/`.
+* PDFs in `output_figures/end2end/memory/` matching panels of paper Figure 12.
 
-* Use `src/experiment/end2end/accuracy/ppl.py` driven by `scripts/end2end-ppl/ppl_pg.sh` and `scripts/end2end-ppl/ppl_pp.sh`.
-* Benchmark files: `dataset/PPL/proof_pile.bin` and `dataset/PPL/pg.bin` as shipped with the artifact. These are the bins the paper's Table 7 uses; substituting `deepmind/pg19` invalidates any "matches Table 7" claim.
-* A separate `deepmind/pg19` evaluation may be added as a generalization probe under a different table label if budget allows.
+**Success Criteria.**
 
-### 1.4 Logging and Plotting
+* All twelve runs produce a peak memory number without OOM (with gradient checkpointing allowed on baseline at 8192).
+* Qualitatively, for every `(model, seq_len)` pair: Jenga peak memory is below LoRA peak memory. LongLoRA is above Jenga and below or comparable to LoRA.
+* The generated PDFs are visually consistent in shape with the corresponding panels in `output_figures/end2end/memory/` produced by Atom S3 from the shipped logs.
 
-* Memory and time logs land under `logs/end2end/memory/` and `logs/end2end/time/` per the existing shell scripts.
-* JSON schema for any new numeric output the report consumes:
-  `{"model": "<model_id>", "method": "<lora|jenga>", "seq_len": <int>, "avg_step_ms": <float>, "step_ms_std": <float>, "peak_memory_gb": <float>, "n_steps_measured": <int>, "seed": <int>}`
-* Perplexity schema:
-  `{"model": "<model_id>", "seq_len": <int>, "benchmark": "<proof_pile|pg|pg19>", "baseline_ppl": <float>, "jenga_ppl": <float>, "seed": <int>}`
-* Plotting via existing `src/experiment/end2end/memory/plot_*.py` and `src/experiment/end2end/time/plot_*.py`. New plots only if the existing scripts do not cover a specific comparison.
+**Report Update.** Section 4.1 receives the new grouped bar PDF and a one paragraph summary stating the observed memory reduction percentage of Jenga over LoRA at each `(model, seq_len)`. Budget ledger updated with actual hours.
 
-**Reproduction Bar.** Same qualitative trends as Figures 12, 13, and Table 7. Numeric drift from the paper is acceptable and discussed in the report. The first kill criterion above is a strict precondition.
+**Budget.** Twelve configurations at roughly 7 to 10 minutes each. Estimate 1.5 hours.
+
+### Atom R2: Figure 13 End to End Execution Time
+
+**Purpose.** Reproduce the paper's Figure 13 grouped bar comparison of step time across LoRA, LongLoRA, and Jenga at the same representative subset used in R1.
+
+**Depends On.** R1.
+
+**Inputs.** Same models, sequence lengths, and method scripts as R1, but pointed at `scripts/end2end-time/...`.
+
+**Steps.**
+
+1. For each `(model, seq_len, method)` from R1 run the corresponding `scripts/end2end-time/<model_family>-<method>.sh <model> <seq_len> False a800` (the device argument is just a log file label).
+2. Confirm each run wrote a log to `logs/end2end/time/<model>-<seq_len>-a800.log`.
+3. Run `python src/experiment/end2end/time/plot_comparison_a800.py` and `python src/experiment/end2end/time/plot_sequence.py`.
+
+**Outputs.**
+
+* Twelve log files under `logs/end2end/time/`.
+* PDFs in `output_figures/end2end/time/` matching panels of paper Figure 13.
+
+**Success Criteria.**
+
+* All twelve runs complete. Each log contains step time numbers.
+* Qualitatively, for every `(model, seq_len)` pair: Jenga step time is below LoRA step time.
+* PDFs are visually consistent in shape with the S3 versions.
+
+**Report Update.** Section 4.2 receives the new grouped bar PDF and a one paragraph summary of observed speedup at each `(model, seq_len)`, including mean and standard deviation across the measured steps. Budget ledger updated.
+
+**Budget.** Twelve configurations at roughly 7 to 10 minutes each. Estimate 1.5 hours.
+
+### Atom R3: Figure 14 Upper Memory Breakdown
+
+**Purpose.** Reproduce the paper's Figure 14 upper stacked bar memory breakdown isolating model state, activations, predictor overhead, and other components on Llama 2 7B at three sequence lengths.
+
+**Depends On.** R2.
+
+**Inputs.** Llama 2 7B at sequence lengths 8192, 12288, 16384. The memory breakdown driver under `src/experiment/ablation/memory-breakdown/` and orchestration in `scripts/ablation-mem-breakdown/run.sh`.
+
+**Steps.**
+
+1. Run `bash scripts/ablation-mem-breakdown/run.sh`. If the script iterates more configurations than the three sequence lengths above, restrict to those.
+2. Confirm logs land under `logs/ablations/memory-breakdown/`.
+3. Run `python src/experiment/ablation/memory-breakdown/plot.py`.
+
+**Outputs.**
+
+* Log files under `logs/ablations/memory-breakdown/`.
+* `output_figures/ablations/memory-breakdown/*.pdf` reproducing the stacked bar layout.
+
+**Success Criteria.**
+
+* The activations component shrinks as the sequence length grows in proportion to the sparsity ratio.
+* The predictor overhead is below five percent of total peak memory across all three lengths.
+* The generated PDF is visually consistent with the S3 baseline.
+
+**Report Update.** Section 4.3 receives the new stacked bar PDF and a one paragraph summary listing the activations fraction at 8K, 12K, 16K, plus the predictor overhead percentage. Budget ledger updated.
+
+**Budget.** Three configurations at roughly 10 minutes each. Estimate 0.5 hours.
+
+### Atom R4: Figure 18 Segment Based Peak Cutting
+
+**Purpose.** Reproduce the paper's Figure 18 demonstration that segmenting the final cross entropy computation reduces the terminal loss memory spike for large vocabulary models.
+
+**Depends On.** R3.
+
+**Inputs.** Llama 2 7B at sequence length 16384. The segment ablation driver under `src/experiment/ablation/segment/` and the orchestration `scripts/ablation-segment/run.sh`.
+
+**Steps.**
+
+1. Run `bash scripts/ablation-segment/base.sh` to produce the naive baseline pickle.
+2. Run `bash scripts/ablation-segment/segment.sh` to produce the segmented variant pickle.
+3. Drag the two pickle files into `docs.pytorch.org/memory_viz` for visualization. Capture screenshots into `output_figures/ablations/segment/`.
+
+**Outputs.**
+
+* Two pickle files under `logs/ablations/segment/`.
+* Two screenshots under `output_figures/ablations/segment/` showing the memory profile pre and post segmentation.
+
+**Success Criteria.**
+
+* The segmented variant's peak loss memory is below the naive baseline's peak loss memory.
+* The relative reduction is in the rough neighborhood of fifteen percent as claimed by the paper.
+
+**Report Update.** Section 4.5 receives the two screenshots and a one paragraph summary citing the relative reduction.
+
+**Budget.** Approximately 10 minutes of GPU time. Estimate 0.2 hours.
+
+### Atom R5: Table 7 Perplexity on Paper Benchmarks
+
+**Purpose.** Reproduce the paper's Table 7 perplexity comparison of LoRA versus Jenga on the paper's own `proof_pile.bin` and `pg.bin` files at a budget feasible subset of configurations.
+
+**Depends On.** R4.
+
+**Inputs.** `dataset/PPL/proof_pile.bin` and `dataset/PPL/pg.bin`. Llama 2 7B baseline LoRA adapter from `checkpoints/peft_model/la/lora/` and Jenga LoRA adapter from `checkpoints/peft_model/la/jenga/`. Sequence lengths 8192 and 16384. Three seeds per configuration.
+
+**Steps.**
+
+1. Run `bash scripts/end2end-ppl/ppl_pp.sh` (proof pile). If the script iterates more configurations than the subset above, restrict to those.
+2. Run `bash scripts/end2end-ppl/ppl_pg.sh` (pg).
+3. Aggregate results into a single table file.
+
+**Outputs.**
+
+* `logs/end2end/accuracy/ppl_results.json` with schema `{"model": "llama2", "method": "<lora|jenga>", "seq_len": <int>, "benchmark": "<proof_pile|pg>", "seed": <int>, "ppl": <float>}`.
+* A markdown table at `logs/end2end/accuracy/table7.md` cross referencing `(method, seq_len, benchmark)` with mean and standard deviation across seeds.
+
+**Success Criteria.**
+
+* All twelve runs (two methods times two benchmarks times two lengths times three seeds equals twenty four with three seeds; in practice run one seed for a first pass then add seeds if budget remains) complete without crash.
+* Jenga perplexity is within roughly five percent of LoRA perplexity at each `(seq_len, benchmark)` pair.
+* The table file exists and is renderable as a LaTeX table later.
+
+**Report Update.** Section 4.4 receives the markdown table along with one paragraph stating whether the equal-perplexity claim of the paper held qualitatively. Budget ledger updated.
+
+**Budget.** Largest single atom in the reproduction phase due to long evaluation runs. Estimate 2 hours.
+
+### Atom R6: Figure 15 Algorithm Ablation (Optional)
+
+**Purpose.** Reproduce the paper's Figure 15 algorithm ablation isolating whether the speedup comes from attention sparsity or MLP sparsity. Cheap and directly informs Extension B framing.
+
+**Depends On.** R5.
+
+**Inputs.** The ablation algorithm scripts under `scripts/ablation-algorithm/` and plotters under `src/experiment/ablation/algorithm/`.
+
+**Steps.**
+
+1. `bash scripts/ablation-algorithm/run.sh`.
+2. `python src/experiment/ablation/algorithm/plot_llama2_attn.py`
+3. `python src/experiment/ablation/algorithm/plot_llama2_mlp.py`
+4. `python src/experiment/ablation/algorithm/plot_opt_attn.py`
+5. `python src/experiment/ablation/algorithm/plot_opt_mlp.py`
+
+**Outputs.** PDFs in `output_figures/ablations/algorithm/`.
+
+**Success Criteria.** PDFs visually consistent with the S3 baseline.
+
+**Report Update.** Section 4.6 gains a sub paragraph noting which component (attention or MLP) contributes more to the speedup.
+
+**Budget.** Approximately 10 minutes of GPU time. Estimate 0.2 hours.
+
+### Atom R7: Figure 16 Predictor Convergence (Optional, Budget Gated)
+
+**Purpose.** Reproduce the paper's Figure 16 predictor training loss curve to validate the rapid convergence claim. This atom is skipped if the remaining buffer is below 3 GPU hours after R6.
+
+**Depends On.** R6.
+
+**Inputs.** Predictor training scripts under `scripts/ablation-predictor/` and drivers under `src/experiment/ablation/predictor/`.
+
+**Steps.**
+
+1. `bash scripts/ablation-predictor/run.sh`.
+2. `python src/experiment/ablation/predictor/plot_loss.py`
+3. `python src/experiment/ablation/predictor/elastic_size.py > logs/ablations/predictor/elastic_size.log`
+
+**Outputs.** PDFs in `output_figures/ablations/predictor/` and the elastic size log.
+
+**Success Criteria.** Loss curve drops sharply within the first one hundred epochs and asymptotes by epoch four hundred.
+
+**Report Update.** Section 4.6 sub paragraph on predictor convergence is populated. If this atom is skipped, Section 4.6 cites the paper Figure 16 directly and discloses the skip.
+
+**Budget.** Three hours. Skip if buffer is below this.
 
 ---
 
-## Part 2: Granular Ablations
+# Category: Improvement
 
-**Objective.** Decompose the end to end gains into their algorithmic components.
+### Atom I1: Extension A Dynamic Adaptive Thresholds
 
-### 2.1 Memory Breakdown (Recreates Figure 14 Upper)
+**Purpose.** Implement and evaluate a runtime entropy heuristic that overrides the static `config.thresh` per batch. Produce one scatter figure of predictor entropy versus token retention ratio and one bar chart of perplexity across swept lambda values, both compared against an equal budget retrained Jenga baseline.
 
-* Driver: `src/experiment/ablation/memory-breakdown/plot.py` and the matching `scripts/ablation-mem-breakdown/run.sh`.
-* Profiling trainer: `jenga.trainer.memory_profile.Trainer`. This is the source of truth for the breakdown; do not derive activation memory by subtraction.
-* Output schema:
-  `{"seq_len": <int>, "model_state_gb": <float>, "activations_gb": <float>, "predictor_gb": <float>, "others_gb": <float>}`
-* Output: stacked horizontal bar chart matching Figure 14 upper.
+**Depends On.** R5. (R6 and R7 are not prerequisites.)
 
-### 2.2 Predictor Convergence (Optional, Budget Gated)
+**Inputs.** `src/jenga/models/modeling_llama.py` and `src/jenga/ops/get_meta.py` where the static threshold is applied. Llama 2 7B at sequence length 8192. `lam in {0.05, 0.1, 0.2}`. Three seeds per setting.
 
-* Driver: `src/experiment/ablation/predictor/llama_rp.py`, `llama_la.py`, `opt_rp.py`, `opt_la.py`. Orchestration via `scripts/ablation-predictor/run.sh`.
-* This sub part is the most expensive single experiment in the paper at roughly three hours on A800. It is included only if Parts 0, 1, and 2.1 finish under budget. The authors' shipped `predictor.pth` is used everywhere else.
-* If skipped, the report's section on predictor convergence cites the paper's Figure 16 directly and discloses we did not re run it.
+**Steps.**
 
-### 2.3 Segment Based Peak Cutting (Recreates Figure 18, Not Figure 19)
+1. Implement `CNNAttnPredictor`-class plumbing only for thresholds: extend `modeling_llama.py` to accept a `dynamic_threshold_lambda` config field. Plumb it through to the call site where the threshold is consumed.
+2. In the forward pass after the predictor scores are computed, compute the normalized Shannon entropy of the positive informativeness scores per layer per batch.
+3. Compute `t_dynamic = t_base + lam * (1 - entropy_norm)` and use it in place of the static threshold.
+4. Add a CLI argument `--dynamic_threshold_lambda` to `src/experiment/end2end/time/llama_jenga.py` and surface it via a new shell wrapper `scripts/extension-adaptive/run.sh <lam>`.
+5. Retrain a Jenga baseline (static threshold) under exactly the same training budget that the adaptive runs will use. This is the fair comparison baseline.
+6. For each `lam in {0.05, 0.1, 0.2}` and each seed in `{0, 1, 2}` run the adaptive driver until the training budget cap is hit. Log retention ratio per layer per batch and final PPL on `proof_pile.bin` and `pg.bin`.
+7. Plot the entropy versus retention scatter and the PPL bar chart.
 
-* Drivers: `src/experiment/ablation/segment/base.py` and `src/experiment/ablation/segment/seg.py`. Orchestration via `scripts/ablation-segment/run.sh`, `base.sh`, and `segment.sh`.
-* Compares naive cross entropy over the full sequence vocabulary against a chunked variant that runs backward per chunk and discards activations before proceeding.
-* Output schema:
-  `{"method": "<naive_loss|segmented_loss>", "peak_loss_mem_gb": <float>, "n_chunks": <int>}`
-* The figure being reproduced is Figure 18 in the paper. The PyTorch memory viz pickle files this driver emits are dragged into `docs.pytorch.org/memory_viz` for the final visual.
+**Outputs.**
 
-### 2.4 Algorithm Ablation (Optional, Cheap)
+* `logs/extensions/adaptive_thresholds/retention.json` with schema `{"lam": <float>, "seed": <int>, "batch_idx": <int>, "layer_idx": <int>, "entropy": <float>, "retention_ratio": <float>}`.
+* `logs/extensions/adaptive_thresholds/ppl.json` with schema `{"method": "jenga_adaptive", "lam": <float>, "seed": <int>, "ppl_proof_pile": <float>, "ppl_pg": <float>}` and matching rows for the equal budget static baseline.
+* `output_figures/extensions/adaptive_thresholds/scatter.pdf` and `output_figures/extensions/adaptive_thresholds/ppl_bar.pdf`.
 
-* Driver and plotting under `src/experiment/ablation/algorithm/` and `scripts/ablation-algorithm/run.sh`.
-* Approximately five minutes total. Isolates whether the speedup comes from attention sparsity or MLP sparsity. Directly informs the framing for the CNN predictor extension below.
+**Success Criteria.**
 
----
+* Adaptive driver completes for all three `lam` values across three seeds without NaN loss.
+* The scatter plot is generated and exhibits a non flat relationship (either positive or negative correlation; flat means the heuristic does not respond to input).
+* The PPL bar chart includes the equal budget retrained static baseline so the comparison is fair.
 
-## Part 3: Three Exploratory Extensions
+**Report Update.** Section 5.1 gains the implementation description and the formula. Section 6.1 gains the two PDFs and a paragraph on whether the entropy heuristic produced any directional improvement and on the observed sensitivity to `lam`. Budget ledger updated.
 
-**Objective.** Test three modifications on top of Jenga. The aim is honest measurement. A negative result is acceptable if it is well controlled. Extensions are ordered ascending by integration risk. Each is compared against a Jenga baseline retrained under the same training budget as the extension itself, not the authors' shipped adapters.
+**Budget.** Three hours covering one static baseline retrain plus three lambda settings times three seeds at reduced step count. Estimate 3 hours.
 
-### 3.1 Extension A: Dynamic Adaptive Thresholds (Lowest Risk)
+### Atom I2: Extension B 1D CNN Predictor
 
-**Hypothesis.** Replacing the static per layer `config.thresh` with a runtime heuristic adapted to the predicted attention entropy of the batch yields a Pareto improvement in perplexity at equal token retention, or vice versa.
+**Purpose.** Implement a 1D convolutional alternative to the per block MLP predictor and compare offline training convergence (mean squared error against the dense attention ground truth) at equal epoch budget. Produce one dual line plot of MSE versus epoch.
 
-**Implementation.**
+**Depends On.** I1.
 
-* Modify `src/jenga/models/modeling_llama.py` and `src/jenga/ops/get_meta.py` where the static threshold is currently consumed. Plumb a per batch override.
-* Compute the normalized Shannon entropy of the predictor's positive informativeness scores in the forward pass.
-* Apply `t_dynamic = t_base + lam * (1 - entropy_norm)` per layer. Initialize `t_base` to the existing `config.thresh` value of 0.4.
-* Expose `lam` as a command line argument.
+**Inputs.** `src/jenga/models/predictor.py`. The offline predictor training harness under `src/experiment/ablation/predictor/`. RedPajama subset.
 
-**Experiments.**
+**Steps.**
 
-* Sensitivity sweep over `lam in {0.05, 0.1, 0.2}` at Llama 2 7B sequence length 8192. Three seeds per setting.
-* Perplexity evaluation reuses the Part 1.3 harness on the paper's `proof_pile.bin` and `pg.bin`.
-* Log token retention ratio per layer per batch.
+1. Add a `CNNAttnPredictor` class to `src/jenga/models/predictor.py`. Two `nn.Conv1d` layers with `kernel_size=3` and `padding=1`, ReLU between them, plus a final linear projection back to the predictor output dimension. The convolutional axis is the block index.
+2. Add a `--predictor_type {mlp,cnn}` argument to the predictor training driver and route to the corresponding class.
+3. Train the MLP variant and the CNN variant under the same number of epochs and same data subset. Cap epochs at whatever fits the budget; flag the cap in the writeup. Three seeds each.
+4. Plot a dual line chart of epoch versus MSE loss.
 
-**Output Schema.**
+**Outputs.**
 
-* `{"method": "jenga_adaptive", "lam": <float>, "seed": <int>, "ppl_proof_pile": <float>, "ppl_pg": <float>, "mean_retention_ratio": <float>}`
-* `{"batch_idx": <int>, "layer_idx": <int>, "entropy": <float>, "retention_ratio": <float>}`
+* `logs/extensions/cnn_predictor/loss.json` with schema `{"epoch": <int>, "predictor_type": "<mlp|cnn>", "seed": <int>, "train_loss": <float>}`.
+* `output_figures/extensions/cnn_predictor/loss_curve.pdf`.
 
-**Figures.**
+**Success Criteria.**
 
-* Scatter of predictor entropy versus token retention ratio.
-* Bar chart of perplexity across the three `lam` values plus the static baseline retrained under equivalent budget.
+* Both predictor variants complete training without NaN.
+* The plot includes mean curves and error bands across seeds.
 
-### 3.2 Extension B: 1D CNN Predictors
+**Report Update.** Section 5.2 gains the implementation description. Section 6.2 gains the loss curve PDF and a paragraph on convergence speed and final asymptotic MSE comparison.
 
-**Hypothesis.** Replacing the per block MLP predictor with a small 1D convolutional predictor over the block dimension captures local sequential context that the MLP cannot, yielding faster offline convergence or a lower final mean squared error against the dense attention ground truth.
+**Budget.** Two hours. Estimate 2 hours.
 
-**Implementation.**
+### Atom I3: Extension C Jenga Plus QLoRA
 
-* Extend `src/jenga/models/predictor.py` with a `CNNAttnPredictor` class. Architecture: two `nn.Conv1d` layers with `kernel_size=3` and `padding=1`, ReLU between them, plus a final linear projection back to the predictor output dimension. The convolutional axis is the block index, not the embedding dimension.
-* Reuse the offline predictor training harness in `src/experiment/ablation/predictor/`. Gate the choice of predictor class via a `--predictor_type {mlp,cnn}` argument.
+**Purpose.** Stack 4 bit weight quantization on top of Jenga. Restrict 4 bit to attention projections on the first pass to avoid the known `PrunedLlamaMLPFunction` integration risk. Produce one grouped bar chart of peak memory at sequence length 16384 across four methods.
 
-**Experiments.**
+**Depends On.** I2.
 
-* Train the MLP predictor and the CNN predictor on the same RedPajama subset for the same number of epochs. The cap is whichever epoch count fits in the budget remaining after Parts 0 to 2; flag the cap in the writeup.
-* Record MSE loss every five epochs.
+**Inputs.** Llama 2 7B at sequence length 16384. `BitsAndBytesConfig` with `load_in_4bit=True`, `bnb_4bit_quant_type="nf4"`, `bnb_4bit_compute_dtype=torch.bfloat16`.
 
-**Output Schema.**
+**Steps.**
 
-* `{"epoch": <int>, "predictor_type": "<mlp|cnn>", "seed": <int>, "train_loss": <float>}`
+1. Create `src/experiment/extension_qlora/llama_jenga_qlora.py` modeled on `src/experiment/end2end/time/llama_jenga.py`.
+2. Wrap the model with the 4 bit config. Call `peft.prepare_model_for_kbit_training` before LoRA wrapping.
+3. Restrict the LoRA target modules so that 4 bit quantization applies only to attention projections. MLP weights remain in bf16 so `PrunedLlamaMLPFunction` continues to receive float tensors.
+4. Create `scripts/extension-qlora/run.sh`. Run baseline LoRA, Jenga, and Jenga plus QLoRA at sequence length 16384. (LongLoRA is optional and included only if budget permits.)
+5. If the first pass fails with the documented integration crash, capture the stack trace verbatim and stop. The negative result is itself a contribution.
+6. Plot a grouped bar of peak memory across the methods.
 
-**Figures.**
+**Outputs.**
 
-* Dual line plot of epoch versus MSE loss. MLP dashed, CNN solid.
+* `logs/extensions/qlora_synergy/metrics.json` with schema `{"method": "<lora|jenga|jenga_qlora>", "seq_len": 16384, "peak_memory_gb": <float>, "avg_step_ms": <float>}`.
+* `output_figures/extensions/qlora_synergy/memory_bar.pdf`.
+* If the run crashes, `logs/extensions/qlora_synergy/crash_trace.txt`.
 
-### 3.3 Extension C: Jenga Plus QLoRA (Highest Risk)
+**Success Criteria.**
 
-**Hypothesis.** Stacking 4 bit weight quantization on top of token level activation sparsity compounds memory savings without breaking predictor convergence.
+* Either the runs complete and `peak_memory_gb` for `jenga_qlora` is strictly below the value for `jenga`, or a clean stack trace is captured documenting the integration failure mode.
 
-**Known Integration Risk.** `PrunedLlamaMLPFunction` in `src/jenga/ops/llama_ops.py` calls `torch.matmul(x, gate_w.t())` directly on the gate, up, and down projection weights. After QLoRA wraps the model with `bnb.nn.Linear4bit` these are packed uint8 tensors, not floats. The function will fail or produce nonsense.
+**Report Update.** Section 5.3 gains the implementation description including the known integration risk. Section 6.3 gains the memory bar chart or the documented failure mode with stack trace excerpt.
 
-**Mitigation.**
-
-* First pass: restrict 4 bit quantization to attention projections only via the LoRA target module list; leave the MLP in bf16 so `PrunedLlamaMLPFunction` continues to receive float weights.
-* Second pass (only if the first works): replace direct `gate_w.t()` accesses with `bnb.functional.dequantize_4bit` calls that materialize the weight transiently for the sparse matmul.
-
-**Implementation.**
-
-* Create `src/experiment/end2end/extension_qlora/llama_jenga_qlora.py` modeled on `src/experiment/end2end/time/llama_jenga.py`.
-* Import `BitsAndBytesConfig` from `transformers`. Use `load_in_4bit=True`, `bnb_4bit_quant_type="nf4"`, `bnb_4bit_compute_dtype=torch.bfloat16`.
-* Call `peft.prepare_model_for_kbit_training` before LoRA wrapping.
-
-**Experiments.**
-
-* Single configuration at Llama 2 7B sequence length 16384. Compare peak memory and step time against LoRA baseline, Jenga, and Jenga plus QLoRA.
-
-**Output Schema.**
-
-* `{"method": "lora|jenga|jenga_qlora", "seq_len": 16384, "peak_memory_gb": <float>, "avg_step_ms": <float>, "predictor_final_loss": <float|null>}`
-
-**Figures.**
-
-* Grouped bar chart of peak memory at 16384 across the four methods.
-
-**Acceptance.** This extension is the planned "swing" of the three. A clean negative result that documents the integration failure mode is a valid report contribution.
+**Budget.** 1.5 hours. Estimate 1.5 hours.
 
 ---
 
-## Part 4: Reporting
+# Category: Reporting
 
-### Deliverable
+### Atom P1: Narrative Sections Draft
 
-One LaTeX report, six to eight pages, conference style. Living markdown skeleton in `REPORT.md` updated alongside the experiments and converted to LaTeX in week four.
+**Purpose.** Draft the markdown for the sections of REPORT.md that do not depend on a specific figure or table: Introduction, Background, Methodology, Discussion, Limitations, Conclusion.
 
-### Required Sections
+**Depends On.** I3.
 
-1. Introduction (Jenga summary, our scope, our extensions, headline finding)
-2. Background and related work
-3. Reproduction methodology (hardware, software pins, model and dataset choices, deviations from paper)
-4. Reproduction results (Figures 12, 13, 14 upper, 18, Table 7)
-5. Extension design (Extensions A, B, C with hypotheses)
-6. Extension results (one subsection per extension, including the QLoRA failure mode if it surfaces)
-7. Discussion including a dedicated paragraph on negative results
-8. Limitations (single seed for time, budget cap, training step caps, dataset substitutions)
-9. Conclusion
-10. References
+**Inputs.** The current populated `REPORT.md` plus the budget ledger and risk register in PLAN.md.
 
-### Honesty Constraints
+**Steps.**
+
+1. Write Section 1 Introduction summarizing Jenga and the scope of our reproduction and extensions.
+2. Write Section 2 Background covering long context fine tuning, LoRA, sparse attention, and Jenga's position.
+3. Finalize Section 3 Methodology with hardware, software pins, model and dataset choices, measurement protocol, and disclosed deviations.
+4. Write Section 7 Discussion including a dedicated negative results paragraph.
+5. Write Section 8 Limitations listing single seed limits, budget cap, training step caps, dataset substitutions, and any skipped atoms.
+6. Write Section 9 Conclusion.
+
+**Outputs.** Updated `REPORT.md`.
+
+**Success Criteria.** No section in `REPORT.md` other than the abstract and references is marked empty.
+
+**Report Update.** This atom is itself the report update.
+
+**Budget.** No GPU. Estimate 0 hours.
+
+### Atom P2: LaTeX Conversion and Final Polish
+
+**Purpose.** Convert `REPORT.md` into a six to eight page LaTeX submission. Tighten figures, add citations, write the abstract last.
+
+**Depends On.** P1.
+
+**Inputs.** Final `REPORT.md`. Course style file or default `article` class.
+
+**Steps.**
+
+1. Create `report.tex` from `REPORT.md` using a standard conference template.
+2. Place figures in a `report/figures/` directory and reference each with a stable label.
+3. Add a BibTeX file with the Jenga paper, the artifact, LoRA, QLoRA, Flash Attention, LongLoRA, and the Hugging Face libraries.
+4. Write the abstract last.
+5. Compile to PDF. Run a final readthrough.
+
+**Outputs.** `report/report.tex`, `report/refs.bib`, `report/report.pdf`.
+
+**Success Criteria.**
+
+* Page count is between six and eight excluding references.
+* All figures referenced in the LaTeX exist in `report/figures/`.
+* No `\cite{?}` or `[TODO]` markers remain.
+
+**Report Update.** Final populated `REPORT.md` plus the compiled PDF.
+
+**Budget.** No GPU. Estimate 0 hours.
+
+---
+
+## Honesty Constraints
 
 * Every reproduction claim that says "matches the paper" must be backed by a numeric column from a paper benchmark, not a substituted one.
 * Every extension claim that compares against Jenga must compare against an equal budget retrained Jenga baseline.
