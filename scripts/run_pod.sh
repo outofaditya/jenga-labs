@@ -72,19 +72,20 @@ if [ ! -d "$REPO_DIR/.git" ]; then
 fi
 cd "$REPO_DIR"
 
+PIP_FLAGS=(--no-cache-dir --break-system-packages)
+
 log "Python dependencies (requirements.txt)"
-pip install --upgrade pip
-pip install -r requirements.txt
+pip install "${PIP_FLAGS[@]}" -r requirements.txt
 
 log "flash-attn (no build isolation)"
 if ! python -c "import flash_attn" >/dev/null 2>&1; then
-  pip install flash-attn --no-build-isolation
+  pip install "${PIP_FLAGS[@]}" flash-attn --no-build-isolation
 else
   log "flash-attn already importable, skipping"
 fi
 
 log "Editable install of jenga"
-pip install -e .
+pip install "${PIP_FLAGS[@]}" -e .
 
 log "huggingface_hub login"
 python - <<'PY'
