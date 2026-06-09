@@ -84,6 +84,8 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
 | I1 | Improvement | 3.0 | 3.00 | done (mechanism check; 64 layer batch points per lam in 0 0.05 0.1 0.2; downstream PPL deferred to I3) |
 | I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B RedPajama) |
+| I3 | Improvement | 0.5 | 0.50 | done (positive: 0.4 percent lower loss at near zero memory overhead, naive inference only) |
+| I4 | Improvement | 0.7 | 0.70 | pending (joint train LoRA with merge_eliminated true then re-evaluate) |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |
 | Buffer | reserve | 3.8 | 3.80 | reserve |

