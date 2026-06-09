@@ -58,8 +58,36 @@ ensure_bin() {
     exit 1
   fi
 }
-ensure_bin python python3
-ensure_bin pip pip3
+
+# torch 2.1.2 requires Python 3.8 to 3.11. If the system python is outside that
+# range, fall back to a conda env on Python 3.10 (the artifact's tested version).
+PYVER=$(python3 -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")' 2>/dev/null || echo "")
+ENV_BIN=""
+case "$PYVER" in
+  3.8|3.9|3.10|3.11)
+    log "System python $PYVER is compatible with torch 2.1.2"
+    ensure_bin python python3
+    ensure_bin pip pip3
+    ;;
+  *)
+    CONDA_BASE=""
+    for cand in /opt/miniforge3 /opt/conda /opt/miniconda3 "$HOME/miniforge3" "$HOME/miniconda3"; do
+      if [ -x "$cand/bin/conda" ]; then CONDA_BASE="$cand"; break; fi
+    done
+    if [ -z "$CONDA_BASE" ]; then
+      echo "[run_pod] Python $PYVER incompatible with torch 2.1.2 and no conda found" >&2
+      exit 1
+    fi
+    ENV_NAME="jenga"
+    ENV_BIN="$CONDA_BASE/envs/$ENV_NAME/bin"
+    if [ ! -x "$ENV_BIN/python" ]; then
+      log "Creating conda env $ENV_NAME (python 3.10) via $CONDA_BASE"
+      "$CONDA_BASE/bin/conda" create -n "$ENV_NAME" -c conda-forge python=3.10 pip -y
+    fi
+    export PATH="$ENV_BIN:$PATH"
+    log "Activated $ENV_NAME at $ENV_BIN with $(python --version 2>&1)"
+    ;;
+esac
 
 log "Verifying NVIDIA driver and CUDA visible"
 nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv
