@@ -83,7 +83,7 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
 | I1 | Improvement | 3.0 | 3.00 | pending |
-| I2 | Improvement | 2.0 | 2.00 | pending |
+| I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B RedPajama) |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |
 | Buffer | reserve | 3.8 | 3.80 | reserve |

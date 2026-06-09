@@ -219,9 +219,20 @@ To be populated by Atom I1. Required figures:
 
 ### 6.2 Extension B Results
 
-To be populated by Atom I2. Required figure:
+Atom I2 ran on the RTX 4090 48 GB pod 2 v2. OPT-1.3B at sequence length 2048 was used to build a `(hidden_state, pooled_attention_score)` cache from four RedPajama documents (cache size ~770 MB). Both MLP (`AttnPredictor1`) and CNN (`CNNAttnPredictor`) predictors were then trained on the cache for 200 epochs each at lr 1e-3, three seeds per predictor type. Total wall clock ~3 minutes per seed.
 
-**Figure 6.2** — paste this image (caption: "Offline predictor training MSE loss versus epoch for the MLP predictor (dashed) and the CNN predictor (solid), three seeds each, RedPajama subset."):
+**Result: the hypothesis is not supported. CNN is ~15x worse than MLP.** Final 5-epoch mean MSE per (predictor, seed):
+
+| Predictor | Seed 0 | Seed 1 | Seed 2 | Mean |
+| --- | --- | --- | --- | --- |
+| MLP | 1.07e3 | 1.44e5 | 9.76e3 | 5.16e4 |
+| CNN | 4.47e4 | 1.71e6 | 6.52e5 | 8.02e5 |
+
+Both predictors show some seed-level variance in convergence, but the CNN additionally exhibits catastrophic gradient spikes at epochs 180 to 200 reaching MSE 5e9 transiently. The MLP converges monotonically with at worst seed-dependent plateaus.
+
+**Caveats.** The negative finding holds for this exact setup; we did not tune hyperparameters per predictor. Possible follow ups (out of this report's scope) include smaller learning rate or weight decay for CNN, longer training, larger RedPajama subset, and using Llama 2 7B instead of OPT-1.3B as the base. Per Section 5.2, the model deviation from Llama 2 7B was forced by 48 GB GPU memory limits.
+
+**Figure 6.2** — paste this image (caption: "Offline predictor training MSE loss versus epoch for the MLP predictor (dashed) and the CNN predictor (solid), three seeds each, OPT-1.3B and RedPajama at sequence length 2048."):
 
 ![CNN vs MLP predictor convergence](output_figures/extensions/cnn_predictor/loss_curve.pdf)
 
