@@ -93,19 +93,37 @@ A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimat
 
 **Depends On.** None.
 
-**Inputs.** Vast.ai or RunPod A100 80GB image preloaded with CUDA 12.1. The artifact's `requirements.txt`. The download links in `README.md` for `peft_model.zip`, `predictor.zip`, and `dataset.zip`. Hugging Face account with at least Llama 2 access requested.
+**Inputs.** Vast.ai or RunPod A100 80GB image preloaded with CUDA 12.1. The artifact's `requirements.txt`. A private Hugging Face dataset under your namespace containing the pre extracted Tsinghua artifacts. A read scoped Hugging Face token.
 
-**Steps.**
+#### S1 Preflight (Off Pod, Zero GPU Cost)
 
-1. Provision one A100 80GB pod. Image base PyTorch 2.1.x with CUDA 12.1 if available, else Ubuntu 22.04.
-2. Clone the repository onto the pod and `cd` into it.
-3. `pip install -r requirements.txt`
-4. `pip install flash-attn --no-build-isolation`
-5. `pip install -e .`
-6. Download `peft_model.zip`, `predictor.zip`, `dataset.zip` from the Tsinghua links in `README.md`. Unzip into `checkpoints/peft_model`, `checkpoints/predictor`, and `dataset/` respectively.
-7. Download base models from Hugging Face into `checkpoints/llama2`, `checkpoints/opt-350m`, `checkpoints/opt-1.3b`, `checkpoints/opt-6.7b`. `checkpoints/llama3` is optional if access has landed.
-8. Mirror the unzipped archives to a personal Hugging Face dataset for future pods.
-9. Snapshot the pod image.
+These steps run on your laptop and on the Hugging Face web UI. They convert the slow Tsinghua artifact download into a fast CDN pull and remove all interactive prompts from the pod boot sequence.
+
+1. **Request Llama 2 access on Hugging Face.** Visit `huggingface.co/meta-llama/Llama-2-7b-hf` while signed in and submit the access form. Approval is typically minutes to a day. Llama 3 8B optional.
+2. **Download the Tsinghua zips locally.** From `README.md`: `peft_model.zip` and `predictor.zip` under "Model Weights"; `dataset.zip` under "Datasets". Unzip them on your laptop.
+3. **Create a private Hugging Face dataset.** Suggested id `<your_username>/jenga-labs-artifacts`. Push the pre extracted contents so the dataset tree contains:
+
+   ```
+   checkpoints/peft_model/...
+   checkpoints/predictor/...
+   dataset/...
+   ```
+
+4. **Create a Hugging Face read scoped access token.** Account Settings -> Access Tokens. Store as `HF_TOKEN` for the next step.
+
+#### S1 On Pod (Unattended)
+
+5. Provision one A100 80GB pod. Image base PyTorch 2.1.x with CUDA 12.1 if available, else Ubuntu 22.04.
+6. Clone the repository onto the pod.
+7. Export the two required environment variables:
+
+   ```
+   export HF_TOKEN=hf_...
+   export HF_MIRROR_REPO=<your_username>/jenga-labs-artifacts
+   ```
+
+8. Run `bash scripts/setup_pod.sh`. The script is idempotent. It installs `requirements.txt`, `flash-attn`, and the editable `jenga` package, pulls the pre extracted artifacts from your HF mirror, pulls the base models, and verifies the Atom S1 success criteria. Optional base model downloads are gated by `INCLUDE_*` env vars documented at the top of the script.
+9. Snapshot the pod image so future pods skip the bootstrap entirely.
 
 **Outputs.** A pod whose `checkpoints/` and `dataset/` trees match the layout described in `README.md`. A snapshot ID recorded in `REPORT.md` Appendix B.
 
@@ -114,10 +132,11 @@ A100 80GB is priced here at one dollar per GPU hour as a Vast.ai working estimat
 * `python -c "import torch; print(torch.cuda.is_available())"` prints `True`.
 * `python -c "import flash_attn; import jenga"` exits with code zero.
 * `ls checkpoints/llama2/config.json`, `ls checkpoints/predictor/predictor.pth`, and `ls dataset/PPL/proof_pile.bin` all exist.
+* `scripts/setup_pod.sh` exits with code zero.
 
 **Report Update.** Appendix B Software Environment is populated with the pin list and the snapshot ID.
 
-**Budget.** Roughly 30 to 60 minutes of GPU time mostly on downloads. Estimate 0.5 hours.
+**Budget.** With the preflight done, on pod time drops to roughly 10 to 20 minutes covering install, mirror pull, and base model pulls. Estimate 0.3 hours actual against 0.5 hours reserved.
 
 ### Atom S2: Pipeline Smoke Test
 
