@@ -173,33 +173,50 @@ The modification is guarded by `config.merge_eliminated`; when this flag is Fals
 
 ## 6. Token Merging Results
 
-### 6.1 Inference Time Merging on the Original Adapter
+### 6.1 Four Way Comparison on Held Out Documents
 
-The first evaluation toggles `config.merge_eliminated` on the authors' existing Llama 2 7B + Jenga LoRA adapter at 8 K context across four held out RedPajama documents, with all other variables held constant. The harness records per document forward loss, peak GPU memory, and mean forward wall clock time.
+The principal comparison toggles two independent variables — the LoRA adapter and `config.merge_eliminated` — and measures forward loss, peak GPU memory, and mean forward wall clock on four held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapter was trained on, so the retrained rows are not measured on their own training set. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
 
-| Configuration | Mean loss | PPL ≈ exp(loss) | Peak memory (MB) | Mean forward (s) |
-| --- | --- | --- | --- | --- |
-| Jenga, hard drop (baseline) | 2.5742 | 13.121 | 19,801.8 | 3.78 |
-| Jenga, token merging | 2.5703 | 13.070 | 19,802.3 | 3.64 |
-| Delta vs baseline | −0.4 % | −0.4 % | +0.0025 % | −3.7 % |
+| Adapter | Mode | Mean loss | PPL ≈ exp(loss) | Peak memory (MB) | Mean forward (s) |
+| --- | --- | --- | --- | --- | --- |
+| Original Jenga | hard drop | 2.355 | 10.54 | 19,804.0 | 0.866 |
+| Original Jenga | token merging | 4.508 | 90.72 | 19,804.9 | 0.746 |
+| Retrained with merging | hard drop | 1.719 | 5.58 | 19,804.0 | 0.850 |
+| Retrained with merging | token merging | **1.596** | **4.93** | 19,803.5 | 0.748 |
 
-Token Merging reduces mean forward loss by 0.4 percent at near zero memory cost (a 0.5 MB delta on a 20 GB allocation) and a 3.7 percent lower mean forward wall clock. The magnitude is modest and within plausible noise at four documents under a single seed; the direction is consistent across the three measured axes, and no axis shows a regression.
+Two facts are immediately legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.355 to 4.508 and the approximate perplexity nearly nine-folds from 10.5 to 90.7. The original adapter was trained against a hard drop forward, in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.596 (PPL ≈ 4.93), an improvement of 0.76 over the original adapter under hard drop and of 0.12 over the retrained adapter under hard drop. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
 
-### 6.2 Joint Training with Merging Enabled
+### 6.2 Reading the Comparison
 
-To test whether the inference time win amplifies when the LoRA weights are jointly adapted to the merged token, a new LoRA adapter was trained from step zero with `config.merge_eliminated = True`. Training hyperparameters match the original Jenga LoRA: r = 8, alpha = 16, target modules `q_proj`, `k_proj`, `v_proj`, `o_proj`, AdamW with fp32 optimizer state, bf16 throughout, per device batch size one, learning rate 2e-5 with a 20 step warmup and a constant schedule thereafter, and gradient checkpointing enabled. Context length is 8 K and the optimization runs for 500 steps over 1,000 RedPajama documents. The resulting adapter is then evaluated with the same inference time harness used in Section 6.1, on the same four documents, so the only changed variable between rows is the adapter.
+Three deltas isolate the different effects.
 
-| Adapter | Mode | Mean loss | PPL | Peak (MB) |
-| --- | --- | --- | --- | --- |
-| Original Jenga | hard drop | 2.5742 | 13.121 | 19,801.8 |
-| Original Jenga | token merging | 2.5703 | 13.070 | 19,802.3 |
-| Retrained with merging | token merging | _pending_ | _pending_ | _pending_ |
+The **inference-time-only delta** is the comparison of rows 1 and 2 — the original adapter with and without merging. It is strongly negative: +2.15 mean loss, ×8.6 in approximate PPL. Token Merging is not a drop in modification that can be enabled at inference time on a pre-existing Jenga adapter. The adapter must be jointly trained with the merged forward for the modification to be usable at all.
 
-If the joint training row improves on the second, the additional gain is attributable to the LoRA weights specializing to the merged representation. If it instead matches or regresses, the inference time effect of Section 6.1 saturates the available headroom and joint training provides no additional benefit beyond avoiding the train/test distribution shift.
+The **joint training effect at fixed merge state** is the comparison of rows 1 and 3 — both under hard drop, but the second adapter was retrained for 2,400 steps on a 1,000 document RedPajama slice. It is negative: −0.64 mean loss, −5.0 in approximate PPL. The retraining itself accounts for the majority of the total improvement. Two factors plausibly contribute. The retrained adapter is more recent and may have benefited from a different optimizer trajectory at the same nominal hyperparameters; and although the evaluation documents are drawn from a held out index range, the underlying RedPajama distribution between the training and evaluation slices is similar, so the retrained adapter's general fit to the distribution is sharper than the released adapter's.
 
-![Training loss curve](output_figures/extensions/token_merging/train_loss.pdf)
+The **token merging effect on the retrained adapter** is the comparison of rows 3 and 4 — both adapters are the retrained one, only the merge flag toggles. It is small but positive: −0.12 mean loss, −0.65 in approximate PPL, with the memory delta below 1.5 MB and the forward time slightly faster. This is the soft elimination contribution proper: with an adapter that has been trained to read the broadcast merged signal at the dropped positions, enabling token merging at inference produces a consistent, if modest, additional improvement over the same adapter running under the original hard drop.
 
-*Figure 7. LoRA adapter training loss with token merging enabled from the first optimizer step. Left, per logging step loss; right, the same trace overlaid with a ten step moving average to make the converged plateau legible.*
+The peak memory column is essentially flat across all four rows. The mean forward time is faster for the merged rows by approximately 0.1 s, a 12 percent reduction that we attribute to a combination of measurement noise and the fact that the merged forward path emits a slightly different control flow into flash attention's varlen kernel; the precise mechanism is not isolated by this experiment.
+
+![Mean forward loss](output_figures/extensions/token_merging/loss.pdf)
+
+*Figure 7a. Mean forward loss across the four configurations on four held out RedPajama documents at 8 K context.*
+
+![Approximate perplexity](output_figures/extensions/token_merging/ppl.pdf)
+
+*Figure 7b. Approximate perplexity (exp of mean forward loss) across the same four configurations.*
+
+![Peak GPU memory](output_figures/extensions/token_merging/memory.pdf)
+
+*Figure 7c. Peak GPU memory in GB across the same four configurations. The four bars are within 1.5 MB of each other; the y axis is zoomed.*
+
+![Mean forward time](output_figures/extensions/token_merging/time.pdf)
+
+*Figure 7d. Mean forward wall clock per document.*
+
+![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
+
+*Figure 8. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
 
 ## 7. Discussion
 

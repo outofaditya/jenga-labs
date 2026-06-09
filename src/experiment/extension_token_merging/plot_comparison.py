@@ -1,60 +1,91 @@
-"""Render the token merging comparison bar chart from comparison.csv.
+"""Token merging four way comparison bar charts.
 
-Reads up to three rows (baseline hard drop, original adapter merged,
-retrained merged) and emits a 2x2 figure: mean_loss, ppl_approx,
-peak_memory_mb, mean_forward_s.
+Matches the visual style of src/experiment/end2end/memory/plot_comparison_8k.py:
+the project's standard palette, compact 8x2 figures, dashed y grid, 14 pt
+ticks, black edged bars.
 """
+import argparse
 import csv
-from pathlib import Path
+import os
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
-def main(csv_path: str = "logs/extensions/token_merging/comparison.csv",
-         out_pdf: str = "output_figures/extensions/token_merging/bar.pdf"):
-    rows = []
-    with open(csv_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            rows.append(row)
-    if not rows:
-        raise SystemExit(f"no rows in {csv_path}")
+PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D']
+BAR_LABELS = [
+    "Original\nhard drop",
+    "Original\nmerged",
+    "Retrained\nhard drop",
+    "Retrained\nmerged",
+]
 
-    labels = []
-    loss = []
-    ppl = []
-    mem = []
-    fwd = []
-    for r in rows:
-        labels.append(r["mode"])
-        loss.append(float(r["mean_loss"]))
-        ppl.append(float(r["ppl_approx"]))
-        mem.append(float(r["peak_memory_mb"]) / 1024.0)
-        fwd.append(float(r["mean_forward_s"]))
 
-    fig, axes = plt.subplots(2, 2, figsize=(8, 6))
-    metrics = [
-        ("Mean forward loss", loss),
-        ("Approx PPL", ppl),
-        ("Peak memory (GB)", mem),
-        ("Mean forward (s)", fwd),
-    ]
-    for ax, (title, values) in zip(axes.flat, metrics):
-        bars = ax.bar(range(len(labels)), values, color=["#888888", "#3366cc", "#cc3333"][:len(labels)])
-        ax.set_xticks(range(len(labels)))
-        ax.set_xticklabels(labels, rotation=15, ha="right")
-        ax.set_title(title)
-        ax.set_ylim(min(values) * 0.97, max(values) * 1.03)
-        for bar, v in zip(bars, values):
-            ax.text(bar.get_x() + bar.get_width() / 2, v, f"{v:.3f}", ha="center", va="bottom", fontsize=8)
+def read_rows(path):
+    with open(path) as f:
+        return list(csv.DictReader(f))
 
-    fig.tight_layout()
-    out = Path(out_pdf)
-    out.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(out)
+
+def assemble(heldout_csv, retrained_csv):
+    heldout = read_rows(heldout_csv)
+    retrained = read_rows(retrained_csv)
+    by_role = {}
+    for r in heldout:
+        lab = r.get("label", "")
+        if "hard drop" in lab.lower():
+            by_role["orig_hd"] = r
+        elif "Original adapter, token merging" in lab:
+            by_role["orig_merge"] = r
+    for r in retrained:
+        if r["mode"] == "baseline":
+            by_role["retrain_hd"] = r
+        elif r["mode"] == "merged":
+            by_role["retrain_merge"] = r
+    order = ["orig_hd", "orig_merge", "retrain_hd", "retrain_merge"]
+    return [by_role[k] for k in order]
+
+
+def render_bar(values, ylabel, out, ylim=None):
+    plt.figure(figsize=(8, 2))
+    x = list(range(len(values)))
+    bars = plt.bar(x, values, 0.6, color=PALETTE, edgecolor="black", zorder=3)
+    plt.grid(axis="y", linestyle="--", alpha=0.6)
+    plt.yticks(fontsize=14)
+    plt.xticks(x, BAR_LABELS, fontsize=11)
+    plt.ylabel(ylabel, fontsize=12)
+    if ylim is not None:
+        plt.ylim(*ylim)
+    for bar, v in zip(bars, values):
+        plt.text(bar.get_x() + bar.get_width() / 2, v, f"{v:.3g}",
+                 ha="center", va="bottom", fontsize=10)
+    plt.tight_layout()
+    os.makedirs(os.path.dirname(out), exist_ok=True)
+    plt.savefig(out)
+    plt.close()
     print(f"wrote {out}")
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--heldout_csv", default="logs/extensions/token_merging/comparison_heldout.csv")
+    parser.add_argument("--retrained_csv", default="logs/extensions/token_merging/retrained_heldout.csv")
+    parser.add_argument("--out_dir", default="output_figures/extensions/token_merging")
+    args = parser.parse_args()
+
+    rows = assemble(args.heldout_csv, args.retrained_csv)
+    loss = [float(r["mean_loss"]) for r in rows]
+    ppl = [float(r["ppl_approx"]) for r in rows]
+    mem_gb = [float(r["peak_memory_mb"]) / 1024.0 for r in rows]
+    fwd = [float(r["mean_forward_s"]) for r in rows]
+
+    render_bar(loss, "Mean forward loss",
+               os.path.join(args.out_dir, "loss.pdf"))
+    render_bar(ppl, "PPL = exp(loss)",
+               os.path.join(args.out_dir, "ppl.pdf"))
+    render_bar(mem_gb, "Peak memory (GB)",
+               os.path.join(args.out_dir, "memory.pdf"),
+               ylim=(min(mem_gb) - 0.05, max(mem_gb) + 0.05))
+    render_bar(fwd, "Mean forward (s)",
+               os.path.join(args.out_dir, "time.pdf"))
 
 
 if __name__ == "__main__":
