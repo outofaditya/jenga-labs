@@ -17,8 +17,8 @@
 #   INCLUDE_LLAMA3       1   set to 0 to skip Llama 3 8B (gated access required)
 #   INCLUDE_OPT_350M     1
 #   INCLUDE_OPT_1_3B     1
-#   INCLUDE_OPT_2_7B     0
-#   INCLUDE_OPT_6_7B     0   set to 1 to also pull OPT 6.7B
+#   INCLUDE_OPT_2_7B     1   hello-world.sh checks this base model
+#   INCLUDE_OPT_6_7B     1   hello-world.sh checks this base model
 #
 # Usage on the pod:
 #   export HF_TOKEN=hf_...
@@ -35,8 +35,8 @@ INCLUDE_LLAMA2="${INCLUDE_LLAMA2:-1}"
 INCLUDE_LLAMA3="${INCLUDE_LLAMA3:-1}"
 INCLUDE_OPT_350M="${INCLUDE_OPT_350M:-1}"
 INCLUDE_OPT_1_3B="${INCLUDE_OPT_1_3B:-1}"
-INCLUDE_OPT_2_7B="${INCLUDE_OPT_2_7B:-0}"
-INCLUDE_OPT_6_7B="${INCLUDE_OPT_6_7B:-0}"
+INCLUDE_OPT_2_7B="${INCLUDE_OPT_2_7B:-1}"
+INCLUDE_OPT_6_7B="${INCLUDE_OPT_6_7B:-1}"
 
 log()  { printf "\n[run_pod] %s\n" "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
@@ -119,9 +119,15 @@ pip install "${PIP_FLAGS[@]}" -r requirements.txt
 # RedPajama-Data-1T-Sample.py). Pin to a 2.x release that still honors them.
 pip install "${PIP_FLAGS[@]}" "datasets<3"
 
-log "flash-attn (no build isolation)"
+log "flash-attn (prebuilt wheel for torch 2.1 cu12 cp310, source fallback)"
 if ! python -c "import flash_attn" >/dev/null 2>&1; then
-  pip install "${PIP_FLAGS[@]}" flash-attn --no-build-isolation
+  FA_WHEEL="https://github.com/Dao-AILab/flash-attention/releases/download/v2.5.6/flash_attn-2.5.6+cu122torch2.1cxx11abiFALSE-cp310-cp310-linux_x86_64.whl"
+  if pip install "${PIP_FLAGS[@]}" "$FA_WHEEL"; then
+    log "flash-attn 2.5.6 installed from prebuilt wheel"
+  else
+    log "prebuilt wheel failed; falling back to slow source build"
+    pip install "${PIP_FLAGS[@]}" flash-attn --no-build-isolation
+  fi
 else
   log "flash-attn already importable, skipping"
 fi
@@ -184,7 +190,12 @@ pull_base_model() {
 import sys
 from huggingface_hub import snapshot_download
 hf_id, dest = sys.argv[1], sys.argv[2]
-snapshot_download(repo_id=hf_id, local_dir=dest, local_dir_use_symlinks=False)
+# TF / Flax / ONNX / Meta-original weights are never used and double the disk footprint.
+# For Llama, pytorch_model.bin is redundant since safetensors shards are present.
+ignore = ["*.h5", "*.msgpack", "*.ot", "original/*", "*.flax_model*", "*.bin.zip"]
+if "meta-llama" in hf_id:
+    ignore += ["pytorch_model*.bin", "pytorch_model.bin.index.json"]
+snapshot_download(repo_id=hf_id, local_dir=dest, ignore_patterns=ignore)
 print(f"downloaded {hf_id} -> {dest}")
 PY
 }
