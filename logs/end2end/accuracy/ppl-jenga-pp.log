@@ -1,0 +1,21 @@
+Num validation tokens: 4194304
+data path dataset/PPL/proof_pile.bin
+base model checkpoints/llama2
+peft model checkpoints/peft_model/rp/8k/jenga
+Using seq length 8192
+{'val_acc': 0.7403151392936707, 'val_loss': 1.0252246856689453, 'val_perplexity': 2.787719828861978, 'val_perplexity_per_chunk': tensor([2.7877])}
+Num validation tokens: 4194304
+data path dataset/PPL/proof_pile.bin
+base model checkpoints/llama2
+peft model checkpoints/peft_model/rp/10k/jenga
+Using seq length 10240
+Num validation tokens: 4194304
+data path dataset/PPL/proof_pile.bin
+base model checkpoints/llama2
+peft model checkpoints/peft_model/rp/16k/jenga
+Num validation tokens: 4194304
+data path dataset/PPL/proof_pile.bin
+base model checkpoints/llama2
+peft model checkpoints/peft_model/rp/16k/jenga
+Using seq length 16384
+{'val_acc': 0.7465247511863708, 'val_loss': 0.9947727918624878, 'val_perplexity': 2.7041080662894754, 'val_perplexity_per_chunk': tensor([2.7041])}

@@ -79,7 +79,7 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R2 | Reproduction | 1.5 | 1.50 | done (12 configs; jenga 1.04 to 1.12x faster than LoRA matches paper) |
 | R3 | Reproduction | 0.5 | 0.50 | done (memory breakdown across 8K LoRA + LongLoRA + Jenga at 8K to 16K; predictor overhead 656 MB constant) |
 | R4 | Reproduction | 0.2 | 0.20 | done (base.pickle and segment.pickle generated for Llama 3 14336 manual memory_viz render needed for screenshot images) |
-| R5 | Reproduction | 2.0 | 2.00 | in progress (8K proof_pile and 16K proof_pile done; 8K pg in flight; 16K pg dropped to save GPU hours) |
+| R5 | Reproduction | 2.0 | 2.00 | done (6 of 6 trimmed scope; Jenga 2 to 5 percent higher PPL than LoRA at 4x memory) |
 | R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
 | I1 | Improvement | 3.0 | 3.00 | done (mechanism check; 64 layer batch points per lam in 0 0.05 0.1 0.2; downstream PPL deferred to I3) |

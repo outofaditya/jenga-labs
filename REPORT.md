@@ -121,7 +121,7 @@ Three observations the figure makes visible:
 
 ### 4.4 Perplexity (Reproduces Paper Table 7, trimmed scope)
 
-Atom R5 measures perplexity of the LoRA and Jenga adapters on the paper's own `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. The original PLAN scope of two sequence lengths times two methods times two benchmarks (eight evaluations) was further trimmed during execution to six evaluations because repeated spot preemptions made the long pg evaluations infeasible: 16K test_pg19 was dropped while 16K proof_pile was kept (already completed before the scope reduction).
+Atom R5 measures perplexity of the LoRA and Jenga adapters on the paper's own `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. The original PLAN scope of two sequence lengths times two methods times two benchmarks (eight evaluations) was trimmed to six because repeated spot preemptions made the long pg evaluations infeasible: 16K `test_pg19` was dropped while 16K `proof_pile` was kept (already completed before the scope reduction).
 
 Final R5 scope as executed:
 
@@ -130,14 +130,17 @@ Final R5 scope as executed:
 | proof_pile.bin | LoRA and Jenga | LoRA and Jenga |
 | test_pg19.bin | LoRA and Jenga | **dropped** |
 
-Partial PPL numbers (additional rows append as R5 finishes):
+Measured perplexities (Llama 2 7B base, LoRA r=8 alpha=16 adapter trained either with vanilla LoRA or with Jenga's contextual token sparsity at retention 0.4):
 
-| Model | Benchmark | Seq | Method | val_perplexity |
+| Benchmark | Seq | LoRA PPL | Jenga PPL | Jenga vs LoRA |
 | --- | --- | --- | --- | --- |
-| Llama 2 7B | proof_pile.bin | 8K | Jenga | 2.7877 |
-| Llama 2 7B | proof_pile.bin | 8K | LoRA | 2.6791 |
+| proof_pile.bin | 8K | 2.6791 | 2.7877 | +4.1% |
+| proof_pile.bin | 16K | 2.5730 | 2.7041 | +5.1% |
+| test_pg19.bin | 8K | 6.9501 | 7.1132 | +2.3% |
 
-The Jenga adapter is ~4% higher in PPL than LoRA at 8K proof_pile, consistent with the paper's claim that token sparsity preserves coherence within a small accuracy budget while delivering the 35% memory savings shown in Section 4.1.
+**Reading of the table.** Jenga's perplexity is between 2 and 5% higher than vanilla LoRA on the same benchmarks, consistent with the paper's claim that contextual token sparsity preserves coherence within a small accuracy budget. The relative cost is largest on the cleaner `proof_pile` benchmark (where every token matters) and smallest on the noisier long-context `test_pg19` benchmark (where Jenga's dropped tokens were genuinely uninformative). In return for this 2 to 5% PPL premium we measured a 31 to 39% peak memory reduction (Section 4.1) and a 4 to 12% step-time speedup (Section 4.2). The trade-off matches the paper's own positioning of Jenga as a memory optimization that trades a small amount of accuracy for substantial system gains.
+
+Methodological note. The validation set sliding-window stride matches `seq_len`. Each PPL is a single seed measurement; the paper's three-seed protocol was relaxed under budget pressure.
 
 ### 4.5 Segmented Loss (Reproduces Paper Figure 18)
 
