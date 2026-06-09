@@ -1,9 +1,10 @@
 """Plot the I4 LoRA training loss curve.
 
-Style matches the project's other loss curves: 6 x 4 figure, raw trace
-in dashed dark grey, smoothed trace in the project blue, horizontal
-legend laid out on top of the axes outside the figure box. All labels
-Title Case, bbox_inches='tight' so labels are never clipped.
+Matches the visual idiom of src/experiment/ablation/predictor/plot_loss.py:
+compact 4 x 3 figure, smooth lines in the project palette, no markers,
+dashed y grid, 12 pt ticks. Two traces are drawn, the raw per logging
+step loss and a moving average. Horizontal legend on top, Title Case
+labels, bbox_inches='tight' on save.
 """
 import argparse
 import ast
@@ -15,6 +16,7 @@ import matplotlib.pyplot as plt
 
 LOSS_PATTERN = re.compile(r"\{'loss': [^}]+\}")
 LOGGING_STEPS = 20
+PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D']
 
 
 def parse_log(path):
@@ -59,14 +61,12 @@ def main():
     smoothed = moving_average(losses, args.window)
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
-    fig, ax = plt.subplots(figsize=(7, 3.6))
+    fig, ax = plt.subplots(figsize=(5, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
-    ax.plot(steps, losses, label="Raw Loss", linestyle="--",
-            color="#444", linewidth=1, zorder=2)
-    ax.plot(steps, smoothed, label=f"{args.window} Step Moving Average",
-            linestyle="-", color="#1f77b4", linewidth=2, zorder=3)
-    ax.set_xlabel("Training Step", fontsize=13)
-    ax.set_ylabel("Loss", fontsize=13)
+    ax.plot(steps, losses, color=PALETTE[1], linewidth=2, label="Raw")
+    ax.plot(steps, smoothed, color=PALETTE[0], linewidth=2, label=f"{args.window} Step Moving Average")
+    ax.set_xlabel("Training Step", fontsize=12)
+    ax.set_ylabel("Loss", fontsize=12)
     ax.tick_params(axis="both", labelsize=12)
 
     handles, labels = ax.get_legend_handles_labels()

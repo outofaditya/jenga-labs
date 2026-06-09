@@ -29,7 +29,7 @@ import numpy as np
 PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
 
 STATE_KEYS = ["orig_hd", "orig_merge", "retrain_merge"]
-STATE_LABELS = ["Original Hard Drop", "Original Token Merging", "Retrained Token Merging"]
+STATE_LABELS = ["Hard Drop", "Token Merge", "Trained Merge"]
 PER_DOC_LOSS = {
     "orig_hd": [1.6641, 2.4219, 3.4219, 1.9141],
     "orig_merge": [4.9375, 4.0625, 4.1875, 4.8438],
