@@ -538,7 +538,35 @@ class LlamaFlashAttention2(LlamaAttention):
                 if self.layer_idx < 15:
                     q_len_now = sum_q.size(1)
                 else:
-                    q_len_now = int(sum_q.size(1) * self.config.sparse)
+                    sparse_ratio = float(self.config.sparse)
+                    # Extension A (I1): dynamic adaptive threshold. When the
+                    # config exposes dynamic_threshold_lambda > 0, we shift the
+                    # retention ratio per batch by lam * (1 - normalized
+                    # predictor entropy). High predictor entropy (uncertainty)
+                    # decreases the ratio, low entropy increases it. With
+                    # lambda = 0 the behavior is identical to the original
+                    # static threshold.
+                    lam = float(getattr(self.config, "dynamic_threshold_lambda", 0.0))
+                    if lam != 0.0 or getattr(self.config, "log_adaptive", False):
+                        probs = torch.softmax(sum_q.detach().float(), dim=-1)
+                        eps = 1e-9
+                        ent = -(probs * (probs.clamp_min(eps)).log()).sum(dim=-1)
+                        max_ent = torch.log(torch.tensor(probs.size(-1), dtype=ent.dtype, device=ent.device))
+                        ent_norm = float((ent / max_ent).clamp(0.0, 1.0).mean().item())
+                        if lam != 0.0:
+                            adj = lam * (1.0 - ent_norm)
+                            sparse_ratio = max(0.01, min(1.0, sparse_ratio + adj))
+                        if getattr(self.config, "log_adaptive", False):
+                            stats = globals().setdefault("_ADAPTIVE_STATS", [])
+                            stats.append({
+                                "layer": int(self.layer_idx),
+                                "lam": float(lam),
+                                "entropy_norm": ent_norm,
+                                "sparse_ratio": float(sparse_ratio),
+                                "retention": float(sparse_ratio),
+                                "q_len_orig": int(sum_q.size(1)),
+                            })
+                    q_len_now = int(sum_q.size(1) * sparse_ratio)
                                     
                 _, idx = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
                 idx = idx.sort().values
