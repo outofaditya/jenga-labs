@@ -20,12 +20,12 @@ python src/experiment/extension_token_merging/train_merged.py \
     --model_name_or_path "checkpoints/${model}" \
     --predictor_path checkpoints/predictor \
     --output_dir checkpoints/peft_model_merged \
-    --max_steps 500 \
+    --max_steps 2400 \
     --per_device_train_batch_size 1 \
     --per_device_eval_batch_size 1 \
     --gradient_accumulation_steps 1 \
     --save_strategy "steps" \
-    --save_steps 250 \
+    --save_steps 1200 \
     --save_total_limit 2 \
     --learning_rate 2e-5 \
     --weight_decay 0.0 \
@@ -38,6 +38,6 @@ python src/experiment/extension_token_merging/train_merged.py \
     --flash_attention True \
     --pool_size 64 \
     --thresh 0.4 \
-    --gradient_checkpoint True \
-    --logging_steps 5 \
+    --gradient_checkpoint False \
+    --logging_steps 20 \
     > "${log_file}" 2>&1
