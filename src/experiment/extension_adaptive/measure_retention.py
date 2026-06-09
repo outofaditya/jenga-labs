@@ -24,6 +24,14 @@ from transformers import AutoTokenizer
 import jenga.models.modeling_llama as jmm
 from jenga.models.modeling_llama import LlamaForCausalLM
 from jenga.utils.config_utils import get_llama_qk
+from jenga.utils.others import smart_tokenizer_and_embedding_resize
+
+
+BEGIN_TOKEN, END_TOKEN = "<<BEGIN>>", "<<END>>"
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
 
 
 def set_RoPE(config, model_max_length):
@@ -80,6 +88,29 @@ def main():
     for k, v in attn_state_dict.items():
         if k in msd:
             msd[k].copy_(v)
+
+    # Resize embeddings the same way the Jenga LoRA adapters were trained
+    # (vocab grows from 32000 to 32005), otherwise PEFT load mismatches.
+    special_tokens_dict = {}
+    if tokenizer.pad_token is None:
+        special_tokens_dict["pad_token"] = DEFAULT_PAD_TOKEN
+    if tokenizer.eos_token is None:
+        special_tokens_dict["eos_token"] = DEFAULT_EOS_TOKEN
+    if tokenizer.bos_token is None:
+        special_tokens_dict["bos_token"] = DEFAULT_BOS_TOKEN
+    if tokenizer.unk_token is None:
+        special_tokens_dict["unk_token"] = DEFAULT_UNK_TOKEN
+    if tokenizer.cls_token is None:
+        special_tokens_dict["cls_token"] = BEGIN_TOKEN
+    if tokenizer.sep_token is None:
+        special_tokens_dict["sep_token"] = END_TOKEN
+    special_tokens_dict["additional_special_tokens"] = ["[INST]", "[/INST]"]
+    smart_tokenizer_and_embedding_resize(
+        special_tokens_dict=special_tokens_dict,
+        tokenizer=tokenizer,
+        model=model,
+    )
+
     if args.peft_model and args.peft_model != "none":
         print(f"loading peft adapter {args.peft_model}...", flush=True)
         model = PeftModel.from_pretrained(model, args.peft_model)
