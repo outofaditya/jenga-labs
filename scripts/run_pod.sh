@@ -138,8 +138,9 @@ mkdir -p checkpoints dataset
 pull_mirror_path() {
   local subdir="$1"   # path inside the mirror repo
   local dest="$2"     # local destination
-  if [ -d "$dest" ] && [ -n "$(ls -A "$dest" 2>/dev/null)" ]; then
-    log "Mirror path $subdir already populated at $dest, skipping"
+  local sentinel="$3" # required file relative to dest; if missing or zero size we re-pull
+  if [ -n "$sentinel" ] && [ -s "$dest/$sentinel" ]; then
+    log "Mirror path $subdir already populated (sentinel $sentinel ok), skipping"
     return
   fi
   log "Pulling mirror path $subdir into $dest"
@@ -156,15 +157,17 @@ src_root = os.path.join(src, subdir)
 os.makedirs(os.path.dirname(os.path.abspath(dest)), exist_ok=True)
 if os.path.isdir(dest):
     shutil.rmtree(dest)
-shutil.copytree(src_root, dest, symlinks=True)
+# symlinks=False follows symlinks so the actual blob bytes get copied,
+# not relative pointers into the HF cache that break outside of it
+shutil.copytree(src_root, dest, symlinks=False)
 print(f"copied {src_root} -> {dest}")
 PY
 }
 
 log "Pulling pre extracted artifacts from $HF_MIRROR_REPO"
-pull_mirror_path "checkpoints/peft_model" "checkpoints/peft_model"
-pull_mirror_path "checkpoints/predictor"  "checkpoints/predictor"
-pull_mirror_path "dataset"                "dataset"
+pull_mirror_path "checkpoints/peft_model" "checkpoints/peft_model" "la/lora/adapter_model.safetensors"
+pull_mirror_path "checkpoints/predictor"  "checkpoints/predictor"  "predictor.pth"
+pull_mirror_path "dataset"                "dataset"                "PPL/proof_pile.bin"
 
 pull_base_model() {
   local hf_id="$1"
