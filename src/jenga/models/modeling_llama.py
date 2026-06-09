@@ -705,10 +705,21 @@ class LlamaFlashAttention2(LlamaAttention):
 
         if not output_attentions:
             attn_weights = None
-        if self.layer_idx != 31: 
+        if self.layer_idx != 31:
             output = torch.zeros((bsz, q_len, attn_output.shape[-1]), device=attn_output.device, dtype=attn_output.dtype)
-            output[0].scatter_(0, idx.unsqueeze(1).expand(-1, attn_output.size(-1)), attn_output[0])
-        
+            if merge_eliminated:
+                # Soft elimination scatter. The kept tokens occupy attn_output[:, :-1]
+                # at their original positions idx[:-1]. The merged token at
+                # attn_output[:, -1] is broadcast back onto every dropped
+                # position so the residual stream carries a representation of
+                # the eliminated block rather than zeros. This avoids the
+                # duplicate index scatter the naive single call would produce.
+                n_kept = q_len_now - 1
+                kept_idx = idx[:n_kept]
+                output[0].scatter_(0, kept_idx.unsqueeze(1).expand(-1, attn_output.size(-1)), attn_output[0, :n_kept])
+                output[0, drop_token_idx, :] = attn_output[0, -1, :]
+            else:
+                output[0].scatter_(0, idx.unsqueeze(1).expand(-1, attn_output.size(-1)), attn_output[0])
             return output, attn_weights, past_key_value
         return attn_output, attn_weights, past_key_value
 
