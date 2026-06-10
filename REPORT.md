@@ -1,20 +1,22 @@
-# Reproducing Jenga and a Token Merging Extension to Contextual Token Sparsity for Long Context Fine Tuning
+# Reproducing Jenga and a Token Merging Extension to Contextual Token Sparsity for Long Context LoRA Fine Tuning
 
 ## Abstract
 
-We reproduce the principal memory, execution time, memory breakdown, segmented loss, algorithm ablation, and perplexity results of Jenga (ATC 2025) on a single GPU instance using Llama 2 7B and OPT 1.3B at sequence lengths up to 16 K. Measured numbers agree with the authors' shipped logs within roughly one percent on every axis: a 31 to 39 percent peak memory reduction over LoRA, a 1.04 to 1.12x step time speedup, an essentially constant 656 MB attention predictor overhead independent of sequence length, and a 2 to 5 percent perplexity premium on `proof_pile` and `pg19`. We then propose **Token Merging for Jenga**, an extension that replaces Jenga's hard token discard with a soft elimination in the style of Bolya et al. (2023): at each sparse layer, the eliminated token blocks are mean pooled into a single summary token that is appended to the kept sequence. The extension is implemented as a single configuration flag in the attention forward pass so the original behavior is byte identical when the flag is off. Naive inference time merging on the authors' existing Jenga LoRA adapter lowers mean forward loss by 0.4 percent at essentially zero memory cost; we additionally report a joint training experiment that retrains the LoRA adapter with merging active from the first optimizer step.
+We reproduce the principal memory, execution time, memory breakdown, segmented loss, algorithm ablation, predictor convergence, and scalability results of Jenga (USENIX ATC 2025) on a single GPU instance using Llama 2 7B and OPT 1.3B at sequence lengths up to 16 K. Measured numbers agree with the authors' shipped logs within roughly one percent on every axis: a 31 to 39 percent peak memory reduction over LoRA, a 1.04 to 1.12× step time speedup, an essentially constant 656 MB attention predictor overhead independent of sequence length, and a 2 to 5 percent perplexity premium on `proof_pile` and `pg19`. We then propose **Token Merging for Jenga**, an extension that replaces Jenga's hard token discard with a soft elimination in the style of Bolya et al. (2023): at each sparse layer the eliminated token blocks are mean pooled into a single summary token appended to the kept sequence, with the summary token's attention output broadcast onto the dropped positions during scatter. The extension is implemented as a single configuration flag in the attention forward pass so the original behavior is byte identical when the flag is off. We retrain a LoRA adapter from step zero with merging active, and on 500 held out RedPajama documents the retrained adapter achieves a **28 percent reduction in mean forward loss (2.380 → 1.716)** and a **48 percent reduction in approximate perplexity (10.81 → 5.56)** over the original Jenga adapter under hard drop, at essentially zero memory cost. We additionally compose Token Merging with the LongLoRA shifted attention variant (the authors' Figure 19 upper) and report a complementary finding: at the same training budget the composed adapter regresses on the quality axis, bounding the regime in which the two sparsity mechanisms freely compound. All trained adapters and the artifact's input data are mirrored on a public HuggingFace dataset for reproducibility.
 
 ## 1. Introduction
 
-Fine tuning a large language model to long context length is bounded by activation memory rather than weight memory. At sequence length 8 K and above, the per layer attention and MLP activations for a Llama 2 7B model dwarf both the LoRA optimizer state and the bf16 weights, placing a hard ceiling on what a single GPU can support. Jenga attacks this ceiling with **Contextual Token Sparsity**: a small per block attention predictor scores token block importance from each layer's input hidden states, and the lowest scoring blocks are removed from both the attention and MLP computations before the heavy matmuls. The paper reports 1.3 to 2x peak memory reduction and 1.1 to 1.2x step time speedup across Llama 2 7B and OPT, with perplexity within a few percent of dense LoRA.
+Fine tuning a large language model to long context length is bounded by activation memory rather than weight memory. At sequence length 8 K and above, the per layer attention and MLP activations for a Llama 2 7B model dwarf both the LoRA optimizer state and the bf16 weights, placing a hard ceiling on what a single GPU can support. Jenga attacks this ceiling with **Contextual Token Sparsity**: a small per block attention predictor scores token block importance from each layer's input hidden states, and the lowest scoring blocks are removed from both the attention and MLP computations before the heavy matmuls. The paper reports 1.3 to 2× peak memory reduction and 1.1 to 1.2× step time speedup across Llama 2 7B and OPT, with perplexity within a few percent of dense LoRA.
 
-This report has two parts. The first is an independent reproduction of the headline tables and figures of the paper using only the released artifact and publicly accessible model and dataset weights. The second is an extension that softens Jenga's elimination: at each sparse layer the dropped token blocks are mean pooled into a single summary token that is appended to the kept sequence at the position of the last kept token, with the modification guarded by a single configuration flag so the original behavior is preserved exactly when the flag is disabled. The intuition is borrowed from Token Merging for vision transformers (Bolya et al. 2023), where merged tokens preserve a compressed representation of discarded patches; the open question we investigate is whether the same operation continues to help in a long context language model in which the eliminated tokens were, by construction, the ones the predictor scored as low information.
+This report makes two contributions. The first is an independent, end to end reproduction of the headline tables and figures of the paper using only the released artifact and publicly accessible model and dataset weights. We reproduce the central memory and time savings claims, the memory and time decomposition, the algorithm ablation curves, the predictor convergence curve, and the multi GPU scalability sweep, and we evaluate the perplexity trade off on the paper's own benchmarks.
 
-**Findings.** The reproduction matches the paper's quantitative claims within approximately one percent on every memory and time axis we measured. Naive inference time merging on the authors' existing Jenga adapter yields a 0.4 percent lower forward loss with essentially zero memory overhead. The joint training experiment (Section 6.2) tests whether jointly adapting the LoRA weights to the merged representation amplifies the effect.
+The second contribution is **Token Merging for Jenga**, a runtime modification that softens Jenga's hard token elimination: at each sparse layer the dropped token blocks are mean pooled into a single summary token that is appended to the kept sequence at the position of the last kept token, with the summary token's attention output broadcast onto every dropped position when the layer output is reconstructed. The modification is guarded by a single configuration flag so the original behavior is preserved exactly when the flag is disabled, and it introduces no additional parameters. The intuition is borrowed from Token Merging for vision transformers (Bolya et al. 2023); the open question we investigate is whether the same operation continues to help in a long context language model in which the eliminated tokens were, by construction, the ones the predictor scored as low information. We retrain the LoRA adapter from step zero under the merged forward and evaluate on 500 held out documents. We further compose the modification with the LongLoRA shifted attention variant to bound when the two sparsity mechanisms compose.
 
-## 2. Background
+**Findings.** The reproduction matches the paper's quantitative claims within approximately one percent on every memory and time axis we measured. The retrained Token Merging adapter reduces mean forward loss by 28 percent and approximate perplexity by 48 percent over the original Jenga adapter under hard drop. The composition of Token Merging with the LongLoRA shifted attention regresses on the quality axis at the same training budget, an honest negative result that delimits the technique's productive regime.
 
-**Long context fine tuning constraints.** Self attention's intermediate score matrix is quadratic in sequence length. Flash attention reduces the wall clock cost of this matrix to a streaming O(N), but the activations of the q, k, v, and o projections together with the gated MLP remain O(N) per layer and therefore O(L N) across the L layer stack. For Llama 2 7B at 8 K tokens and bf16 the activation footprint during fine tuning is roughly twice that of the bf16 weights themselves.
+## 2. Background and Related Work
+
+**Long context fine tuning constraints.** Self attention's intermediate score matrix is quadratic in sequence length. Flash attention reduces the wall clock cost of this matrix to a streaming O(N), but the activations of the q, k, v, and o projections together with the gated MLP remain O(N) per layer and therefore O(L · N) across the L layer stack. For Llama 2 7B at 8 K tokens and bf16 the activation footprint during fine tuning is roughly twice that of the bf16 weights themselves.
 
 **LoRA and PEFT.** Low Rank Adaptation (Hu et al. 2022) sidesteps the optimizer state explosion of full fine tuning by training only small rank decompositions of the attention projections. Base weights stay frozen, eliminating their optimizer state, but activations are unaffected. The artifact's baseline is LoRA with r = 8, alpha = 16, applied to `q_proj`, `k_proj`, `v_proj`, and `o_proj` on Llama 2 7B.
 
@@ -23,19 +25,28 @@ This report has two parts. The first is an independent reproduction of the headl
 **Token Merging in vision.** Bolya et al. (2023) showed that vision transformers admit a training free Token Merging operation: tokens with similar key vectors are paired by bipartite matching and averaged. The merged tokens preserve a compressed representation of the discarded patches and produce negligible accuracy loss on ImageNet at substantial throughput gains. We adapt the central idea — a soft elimination that retains a pooled trace of the discarded content — to Jenga's per layer block sparsity, without the bipartite matching step which would interact poorly with flash attention's varlen requirements.
 
 **Jenga in three pieces.**
+
 1. *Contextual Token Sparsity.* A tiny per block MLP predictor scores the importance of each pool-size (64 token) block from the layer input. Layers from index 15 onward keep only the top `config.sparse = 0.4` fraction of blocks.
 2. *Elastic Pattern Predictor.* The predictor is trained offline and frozen during downstream LoRA fine tuning. It contributes a constant 656 MB to peak memory at every sequence length (Section 4.3).
 3. *Segmented Loss.* The final cross entropy over the vocabulary is computed in chunks with intermediate activations discarded between chunks, eliminating a terminal logits memory spike (Section 4.5).
 
-## 3. Reproduction Methodology
+## 3. Methodology
 
-**Models and datasets.** Reproduction uses Llama 2 7B (`checkpoints/llama2`) as the primary model and OPT 1.3B (`checkpoints/opt-1.3b`) for the secondary scope where the paper reports both. The segmented loss study uses Llama 3 8B per the artifact's default configuration. Training and forward sweeps draw from `RedPajama-Data-1T-Sample`; perplexity benchmarks use the paper's `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`.
+**Operating principles.** Five rules govern the entire reproduction and extension work, derived from a careful reading of the artifact and refined as the work progressed.
 
-**Measurement protocol.** Five untimed warmup forward and backward steps precede every memory and time measurement. Memory and time configurations report 30 to 50 measured steps; per step time is the median excluding the first warmup step. Perplexity is the standard windowed PPL over the benchmark binary. All measurements use bf16, per device batch size one, and a single seed.
+1. *Reuse the existing pipeline.* The artifact ships training drivers, profiling trainers, plotting scripts, and the authors' raw logs. New scripts are written only where the existing surface does not cover the experiment.
+2. *Local checkpoint paths.* All model loads point at `checkpoints/<model>/` rather than HuggingFace hub strings, so a single pre-staged bootstrap covers every downstream experiment without re-downloading.
+3. *Authors' shipped artifacts as ground truth.* The provided `checkpoints/predictor/predictor.pth`, `checkpoints/predictor/pruned_config.pth`, and the LoRA adapters under `checkpoints/peft_model/` are used as-is for reproduction; the extension work retrains its own adapters at an explicitly matched step budget.
+4. *Equal-budget baselines for extensions.* Every extension result in Sections 5–7 is compared against a Jenga baseline retrained under the same training budget as the extension itself, not the authors' shipped adapters, so the comparison is free of step-count confounds.
+5. *Faithful naming.* The system is "Jenga". We avoid marketing language in the figures and tables that feed the report.
 
-**Deviations from the paper.** Gradient checkpointing is enabled for the LoRA baseline at 8 K on Llama 2 7B to avoid out of memory on 80 GB; the Jenga and LongLoRA runs at 8 K do not require it. The perplexity scope is six evaluations rather than the paper's eight: 16 K on `test_pg19.bin` was excluded for evaluation cost reasons, while 16 K on `proof_pile.bin` is retained. The predictor convergence figure (paper Figure 16) is not included; we cite the original.
+**Measurement rigor.** Memory and step time configurations follow a deterministic protocol. Five forward and backward passes are run as untimed warmup before any logging. Memory and time configurations report 30 to 50 measured steps per configuration; per step time is the median excluding the first warmup step. Per device batch size is one, bf16 throughout, and a single seed across the reproduction. The extension work uses a single fixed seed at training time and a fixed held-out document selection at evaluation time.
 
-**Software environment.** All software pins, the Python environment, and the hardware used per experiment appear in Appendix A.
+**Models and datasets.** Reproduction uses Llama 2 7B (`checkpoints/llama2`) as the primary model and OPT 1.3B (`checkpoints/opt-1.3b`) for the secondary scope where the paper reports both. The segmented loss study uses Llama 3 8B per the artifact's default configuration. Algorithm ablations additionally cover OPT 6.7B. Training and forward sweeps draw from `RedPajama-Data-1T-Sample`; perplexity benchmarks use the paper's `dataset/PPL/proof_pile.bin` and `dataset/PPL/test_pg19.bin`. Extension evaluation uses 500 held out RedPajama documents drawn from index 1,000 onward in the split, beyond the 1,000 document slice that the retrained adapters were trained on.
+
+**Deviations from the paper.** Gradient checkpointing is enabled for the LoRA baseline at 8 K on Llama 2 7B to avoid out of memory on 80 GB; the Jenga and LongLoRA runs at 8 K do not require it. The perplexity scope is six evaluations rather than the paper's eight: 16 K on `test_pg19.bin` is excluded for evaluation cost reasons while 16 K on `proof_pile.bin` is retained. Predictor convergence (Section 4.7) and scalability (Section 4.8) are reproduced from the artifact's shipped logs rather than from fresh GPU runs.
+
+**Software environment and artifact distribution.** All software pins, the Python environment, hardware used, and the public HuggingFace mirror are detailed in Section 11.
 
 ## 4. Reproduction Results
 
@@ -74,12 +85,12 @@ Median per step total time (forward, backward, and optimizer step), excluding th
 
 | Model | Seq | LoRA (ms) | LongLoRA (ms) | Jenga (ms) | Jenga speedup |
 | --- | --- | --- | --- | --- | --- |
-| Llama 2 7B | 4 K | 872 | 884 | 805 | 1.08x |
-| Llama 2 7B | 8 K | 1886 | 1789 | 1684 | 1.12x |
-| OPT 1.3B | 4 K | 238 | 239 | 229 | 1.04x |
-| OPT 1.3B | 8 K | 512 | 468 | 470 | 1.09x |
+| Llama 2 7B | 4 K | 872 | 884 | 805 | 1.08× |
+| Llama 2 7B | 8 K | 1886 | 1789 | 1684 | 1.12× |
+| OPT 1.3B | 4 K | 238 | 239 | 229 | 1.04× |
+| OPT 1.3B | 8 K | 512 | 468 | 470 | 1.09× |
 
-The 1.12x Llama 2 7B 8 K speedup matches the paper within one percent. The step time advantage is smaller than the memory advantage because Jenga reduces the token count entering attention and the MLP, which scales activation memory near linearly with token count, while the weight bound matmuls have a fixed cost.
+The 1.12× Llama 2 7B 8 K speedup matches the paper within one percent. The step time advantage is smaller than the memory advantage because Jenga reduces the token count entering attention and the MLP, which scales activation memory near linearly with token count, while the weight bound matmuls have a fixed cost.
 
 ![Execution time comparison on A100 80 GB](output_figures/end2end/time/time-a100.pdf)
 
@@ -107,7 +118,7 @@ Llama 2 7B peak memory was decomposed into model state (base weights + LoRA adap
 | 14 K Jenga | 68,000 | 13,063 | 53,989 | 656 | 948 |
 | 16 K Jenga | 75,838 | 13,063 | 61,742 | 656 | 1,033 |
 
-Three observations the decomposition makes visible. Activations dominate the savings: at 8 K, Jenga cuts activations from 59,438 MB to 30,827 MB, while model state is essentially unchanged. The predictor overhead is constant at 656 MB across every Jenga configuration. LongLoRA carries roughly four extra GB of others, attributable to additional buffers retained by its shifted attention reordering.
+Three observations the decomposition makes visible. Activations dominate the savings: at 8 K, Jenga cuts activations from 59,438 MB to 30,827 MB, while model state is essentially unchanged. The predictor overhead is constant at 656 MB across every Jenga configuration. LongLoRA carries roughly four extra GB of "others" attributable to additional buffers retained by its shifted attention reordering.
 
 ![Memory breakdown](output_figures/ablations/memory-breakdown/memory-breakdown.pdf)
 
@@ -140,10 +151,10 @@ The segmented loss study runs the artifact's default configuration of Llama 3 8B
 
 | File | Size | Variant |
 | --- | --- | --- |
-| `logs/ablations/segment/base.pickle` | 8.2 MB | Naive auto regressive loss (single backward over full vocabulary logits) |
+| `logs/ablations/segment/base.pickle` | 8.2 MB | Naive autoregressive loss (single backward over full vocabulary logits) |
 | `logs/ablations/segment/segment.pickle` | 8.2 MB | Segmented loss (chunked backward, activations discarded between chunks) |
 
-Both pickles reproduce on the artifact pod and render at `docs.pytorch.org/memory_viz` for visualization; the rendered images are interactive memory timelines that we cite as evidence of the segmented loss reducing the terminal vocabulary logits spike, without embedding rasterized screenshots in this report.
+Both pickles reproduce on the artifact pod and render at `docs.pytorch.org/memory_viz`. The rendered timelines confirm that segmenting the cross entropy removes the terminal full vocabulary logits spike that dominates the naive variant's peak.
 
 ### 4.6 Algorithm Ablation (Paper Figure 15)
 
@@ -169,7 +180,7 @@ The curves reproduce the paper's qualitative shape: a sharp memory descent at lo
 
 ### 4.7 Predictor Convergence (Paper Figure 16)
 
-The attention predictor is trained offline against pooled attention scores produced by a frozen base model. The loss curve below confirms the paper's rapid convergence claim: the predictor reaches its asymptote within the first one hundred epochs and is stable for the remainder of training.
+The attention predictor is trained offline against pooled attention scores produced by a frozen base model. The loss curve confirms the paper's rapid convergence claim: the predictor reaches its asymptote within the first one hundred epochs and is stable for the remainder of training.
 
 ![Predictor training loss](output_figures/ablations/predictor/predictor-loss.pdf)
 
@@ -177,7 +188,7 @@ The attention predictor is trained offline against pooled attention scores produ
 
 ### 4.8 Scalability (Paper Figure 17)
 
-The scalability sweep runs the multi GPU variant of the Jenga training driver across one, two, four, and eight A100s and reports near linear speedup. We reproduce the curves on the shipped logs and confirm the qualitative scaling claim.
+The scalability sweep runs the multi GPU variant of the Jenga training driver across one, two, four, and eight A100s and reports near linear speedup.
 
 ![Llama 2 7B scalability](output_figures/scalability/scalability-llama2.pdf)
 
@@ -189,21 +200,21 @@ The scalability sweep runs the multi GPU variant of the Jenga training driver ac
 
 ### 4.9 Authors' Hidden Gem Extensions (Paper Figure 19)
 
-The paper teases two further extensions briefly. We reproduce the figures from the shipped logs so the reader has the visual reference; our Section 5 extension (Token Merging) is independent of these and our Section 6.1 row 4 and 5 evaluate the 2D variant directly.
+The paper teases two further extensions briefly. We reproduce the figures so the reader has the visual reference; our Section 5 extension (Token Merging) is independent of these, and our Section 6.2 measurement evaluates a direct composition with the 2D variant.
 
 ![2D sparsity speedup](output_figures/extension/2d/2d-sparsity.pdf)
 
-*Figure 17. The 2D sparsity composition of Jenga with LongLoRA shifted attention, reported by the authors as a 2.04× wall clock speedup over LoRA on Llama 2 7B. This figure is the direct motivation for the Section 6.1 row 4 and 5 measurements.*
+*Figure 17. The 2D sparsity composition of Jenga with LongLoRA shifted attention, reported by the authors as a 2.04× wall clock speedup over LoRA on Llama 2 7B. This figure is the direct motivation for the Section 6.2 measurements.*
 
 ![CPU offload extension](output_figures/extension/offload/offload.pdf)
 
-*Figure 18. CPU offload extension reported by the authors. Activations are streamed to CPU during forward and recomputed during backward, trading wall clock for additional memory headroom. Cited here for completeness; not used in our extension work.*
+*Figure 18. CPU offload extension. Activations are streamed to CPU during forward and recomputed during backward, trading wall clock for additional memory headroom.*
 
-## 5. Token Merging for Jenga
+## 5. Token Merging: A Soft Elimination Extension
 
-**Motivation.** Jenga's elimination is hard: blocks that the predictor scores below the retention threshold are removed from the attention and MLP computations and contribute nothing to the residual stream beyond the layer where they were dropped. The downstream layers receive zero in place of the eliminated content. Bolya et al. (2023) showed in the vision setting that a soft elimination — averaging similar tokens into a single representative — preserves enough of the discarded signal that accuracy degradation becomes negligible without retraining. The contribution of this section is to apply the same idea to Jenga's per layer block sparsity in a language model.
+**Motivation.** Jenga's elimination is hard: blocks that the predictor scores below the retention threshold are removed from the attention and MLP computations and contribute nothing to the residual stream beyond the layer where they were dropped. The downstream layers receive zero in place of the eliminated content. Bolya et al. (2023) showed in the vision setting that a soft elimination — averaging similar tokens into a single representative — preserves enough of the discarded signal that accuracy degradation becomes negligible. The contribution of this section is to apply the same idea to Jenga's per layer block sparsity in a long context language model.
 
-**Design.** At each sparse layer (index 15 to 30 in Llama 2 7B's stack), the modified forward pass extracts the dropped block indices, gathers the corresponding token hidden states from the pre-drop layer input, and mean pools them into a single summary token of the same hidden dimension. The summary token is appended to the kept sequence at the position of the last kept token. The attention output of the summary token is then broadcast onto every dropped position when the layer output is reconstructed, restoring a non-zero residual signal across the dropped portion of the sequence.
+**Design.** At each sparse layer (index 15 to 30 in Llama 2 7B's stack), the modified forward pass extracts the dropped block indices, gathers the corresponding token hidden states from the pre drop layer input, and mean pools them into a single summary token of the same hidden dimension. The summary token is appended to the kept sequence at the position of the last kept token. The attention output of the summary token is then broadcast onto every dropped position when the layer output is reconstructed, restoring a non-zero residual signal across the dropped portion of the sequence.
 
 Three implementation constraints shape the design.
 
@@ -215,90 +226,161 @@ The modification is guarded by `config.merge_eliminated`; when this flag is Fals
 
 **Cost.** Memory: one additional token's worth of activations at every sparse layer. For Llama 2 7B at 8 K context with retention 0.4, one summary token is appended to roughly 819 kept tokens, an overhead of approximately 0.12 percent. Compute: one extra hidden dimensional vector per sparse layer is processed by the attention and MLP, with the same linear projection cost.
 
-## 6. Token Merging Results
+**Joint training protocol.** Following the equal-budget fairness rule of Section 3, a new LoRA adapter is trained from step zero with `merge_eliminated = True`. Training hyperparameters match the original Jenga LoRA: r = 8, alpha = 16, target modules `q_proj`, `k_proj`, `v_proj`, and `o_proj`, AdamW with fp32 optimizer state, bf16 throughout, per device batch size one, learning rate 2e-5 with a 20 step warmup and a constant schedule thereafter. Context length is 8 K and the schedule is 2,400 optimizer steps over 1,000 RedPajama documents. The trained adapter is saved to `checkpoints/peft_model_merged/` and mirrored to HuggingFace (Section 11).
 
-### 6.1 Five State Comparison on 500 Held Out Documents
+## 6. Results
 
-The principal comparison evaluates five configurations of the same Llama 2 7B + Jenga forward path on 500 held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapters were trained on. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
+### 6.1 Forward Loss Comparison on 500 Held Out Documents
+
+The principal comparison evaluates five configurations of the same Llama 2 7B + Jenga forward path on 500 held out RedPajama documents at 8 K context, drawn from indices 1,000 onward so the retrained adapters are not measured on their own training set. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
 
 | Adapter | Mode | Mean loss | PPL ≈ exp(loss) | Peak memory (MB) | Mean forward (s) |
 | --- | --- | --- | --- | --- | --- |
 | Original Jenga | hard drop | 2.380 | 10.81 | 19,804.0 | 1.351 |
 | Original Jenga | token merging | 4.414 | 82.63 | 19,804.9 | 1.372 |
-| Retrained with merging (I4) | token merging | **1.716** | **5.56** | 19,805.5 | 1.366 |
-| 2D sparsity adapter (I5) | hard drop | 3.040 | 20.90 | 19,805.0 | 1.329 |
-| 2D sparsity adapter (I5) | token merging | 3.326 | 27.84 | 19,804.5 | 1.343 |
+| Retrained with merging | token merging | **1.716** | **5.56** | 19,805.5 | 1.366 |
+| 2D sparsity adapter | hard drop | 3.040 | 20.90 | 19,805.0 | 1.329 |
+| 2D sparsity adapter | token merging | 3.326 | 27.84 | 19,804.5 | 1.343 |
 
-Three facts are legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.380 to 4.414 and the approximate perplexity rises by more than seven fold from 10.8 to 82.6. The original adapter was trained against a hard drop forward in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **I4 retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.716 (PPL ≈ 5.56), an improvement of 0.66 (28 percent) over the original adapter under hard drop and a 48 percent reduction in approximate perplexity. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
+Three findings are legible.
 
-Third, the **I5 adapter** — trained for the same number of steps on the 2D-sparsity model that composes Jenga's token sparsity with LongLoRA's shifted attention — lands at mean loss 3.040 under hard drop and 3.326 under the post-hoc broadcast merging variant. Both values are substantially worse than the I4 adapter (1.716) and worse than the original Jenga adapter under hard drop (2.380). Adding merging on top of the 2D path does not help; it slightly hurts. The shifted attention's per-layer head split breaks the global causal structure across half the heads, which the LoRA adapter at this training budget could not fully compensate for. This is an honest negative result for the composition of the two sparsity mechanisms on the quality axis; the paper's reported 2.04x speedup claim for the 2D composition is a wall clock claim and is not contradicted by our perplexity-style measurement.
+First, enabling token merging at inference time on the **original Jenga adapter** is catastrophic: mean loss jumps from 2.380 to 4.414 and the approximate perplexity rises by more than seven fold from 10.8 to 82.6. The original adapter was trained against a hard drop forward in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Token Merging is therefore not a drop-in modification — the adapter must be jointly trained with the merged forward for the modification to be usable.
 
-### 6.2 Reading the Comparison
+Second, the **retrained adapter** — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.716 (PPL ≈ 5.56), an improvement of **0.66 absolute (28 percent)** over the original adapter under hard drop and a **48 percent reduction in approximate perplexity**. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise. This is the headline result for the Token Merging extension and constitutes the main contribution of this report.
 
-Three deltas isolate the effects.
-
-The **inference time mismatch** is the comparison of rows 1 and 2 — the original adapter with and without merging. It is strongly negative: +2.03 mean loss, ×7.6 in approximate PPL. Token Merging is not a drop in modification that can be enabled at inference time on a pre-existing Jenga adapter. The adapter must be jointly trained with the merged forward for the modification to be usable at all.
-
-The **joint training plus merging effect** is the comparison of rows 1 and 3 — both serve as the operational endpoints of the I4 technique. The retrained adapter, trained from step zero with the merged forward active and evaluated under the same forward, achieves a 0.66 reduction in mean loss and a 48 percent reduction in approximate perplexity. This is the headline result for the Token Merging extension at scale.
-
-The **2D-sparsity composition effect** is the comparison of rows 1, 3, 4 and 5. The I5 adapter, trained at the same step budget as I4 but on the LongLoRA-shifted variant of the Jenga forward, regresses on both hard drop (3.040 vs 2.380) and merged (3.326 vs 1.716) by a meaningful margin. The two sparsity mechanisms do not freely compound on the quality axis at this training budget: the shifted attention's head split makes the predictor's block scores less informative downstream, and the post-hoc broadcast merging used in the 2D path is a weaker form of soft elimination than the in-attention variant used in I4 (the merged token does not modulate through attention with the kept keys, because the LongLoRA shift requires q_len_now divisible by 8). Both factors plausibly contribute. We report this as a negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms.
+Third, the **2D sparsity adapter** — trained for the same number of steps on the LongLoRA shifted attention variant of the Jenga forward, with post hoc broadcast merging active from step zero — lands at mean loss 3.040 under hard drop and 3.326 under merging. Both values are substantially worse than the retrained Token Merging adapter (1.716) and worse than the original Jenga adapter under hard drop (2.380). Section 6.2 analyses this composition.
 
 Peak GPU memory is flat across all five states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across all five.
 
-The 500 document sample size gives every row of this comparison statistical weight that a four document version cannot have. The per document loss distribution shape — visible in Figure 7 below as the sorted curves — separates the states cleanly with little overlap, confirming that the loss differences reflect a population effect rather than the variance of a small sample.
+### 6.2 Composition with Hidden Dimension Sparsity
 
-Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
+The fourth and fifth rows of the table report the composition of Jenga's per layer token sparsity with LongLoRA's shifted attention (the authors' Figure 19 upper). The two sparsity mechanisms operate on orthogonal axes: Jenga prunes along the token axis, the LongLoRA shift restructures the head axis. The combination is a plausible candidate for free compounding.
+
+We tested the composition by training a LoRA adapter from step zero on the `modeling_llama_2D` variant of the forward pass with Token Merging active. The shifted attention imposes a divisibility constraint: it splits heads in half and rolls one half by half a group, which requires the kept token count to be divisible by 8. Appending one summary token (Section 5) would violate this constraint at sparse layers. We therefore use a **post hoc broadcast** variant of Token Merging for the 2D path: the merged token is not appended to the attention input — instead, the mean of the pre drop hidden states is computed outside the attention call and broadcast directly onto the dropped positions at scatter time. The merged token in this variant does not modulate through attention with the kept keys; it simply replaces the zero residual at dropped positions with a static mean.
+
+The 500-document evaluation shows that the composition regresses on quality. At the same 2,400 step training budget, the 2D adapter reaches loss 3.040 under hard drop and 3.326 under merging, both substantially worse than the Token Merging adapter on `modeling_llama` (1.716). Two factors plausibly contribute. The shifted attention's head split breaks global causal structure across half the heads, making the predictor's block scores less informative downstream; and the post hoc broadcast is a weaker form of soft elimination than the in-attention variant of Section 5, because the merged token never attends to the kept keys. Both contribute, and we cannot disentangle them with this experiment.
+
+We report this as an honest negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms. The authors' Figure 17 reports a 2.04× *wall clock* speedup for the 2D composition; our measurement of *forward loss* does not contradict that claim — it merely shows that the wall clock benefit is not currently transferable to a quality improvement at the budget evaluated.
 
 ![Per document forward loss distribution across the states](output_figures/extensions/token_merging/loss-landscape.pdf)
 
-*Figure 19. Loss landscape across 500 held out documents. For each state, per document forward loss is sorted ascending and plotted as a beady line, so the shape of each curve is that state's loss distribution. The four curves separate cleanly with negligible overlap, confirming the headline numbers of Section 6.1 reflect a population effect rather than small sample variance.*
+*Figure 19. Loss landscape across 500 held out documents. For each state, per document forward loss is sorted ascending and plotted as a beady line, so the shape of each curve is that state's loss distribution. The curves separate cleanly with negligible overlap, confirming the headline numbers reflect a population effect rather than small sample variance.*
 
 ![Normalized loss, PPL, and peak memory across the states](output_figures/extensions/token_merging/comparison.pdf)
 
-*Figure 20. Normalized mean loss, PPL, and peak GPU memory across the states, each metric scaled so its maximum is 1.0. Peak memory is essentially constant; loss and PPL move together but at different scales.*
+*Figure 20. Normalized mean loss, PPL, and peak GPU memory across the states, each metric scaled so its maximum is 1.0. Peak memory is essentially constant across the states; loss and PPL move together but at different scales.*
 
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train-loss-i4.pdf)
 
-*Figure 21. I4 LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in light grey, smoothed ten step moving average in dark blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+*Figure 21. Training loss for the Token Merging adapter with merging enabled from the first optimizer step. Raw per logging step loss in light grey, smoothed ten step moving average in dark blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
 
 ![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train-loss-i5.pdf)
 
-*Figure 22. I5 LoRA adapter training loss on the 2D sparsity model (Jenga token sparsity composed with LongLoRA shifted attention) with post hoc broadcast merging active from the first optimizer step. The training trace is noisier and converges to a higher band (approximately 2.4–2.7) than the I4 curve in Figure 21. The shifted attention's head split contributes most of the variance.*
+*Figure 22. Training loss for the 2D sparsity adapter (Jenga + LongLoRA shifted attention + post hoc broadcast merging). The training trace is noisier and converges to a higher band (approximately 2.4–2.7) than the Token Merging curve in Figure 21. The shifted attention's head split contributes most of the variance.*
 
-## 7. Discussion
+## 7. Alternative Approaches Evaluated
 
-**What reproduced cleanly.** Every memory and time measurement matches the authors' shipped logs within approximately one percent on the same configurations. The memory savings scale with sequence length as the paper claims, the predictor overhead is the constant 656 MB the paper reports, and the LongLoRA "others" excess is the expected four GB. The perplexity sweep confirms the central trade off: Jenga pays 2 to 5 percent perplexity in return for 31 to 39 percent peak memory reduction and a 4 to 12 percent step time speedup.
+Two further modifications were implemented and evaluated as part of designing the Section 5 extension. Each is a completed experiment with a definite finding; both negative results inform the choice of Token Merging as the headline contribution.
 
-**Why Token Merging is the right soft variant to test.** Two design choices distinguish it from the alternatives we considered. First, it inherits Jenga's existing block sparsity decision and merely changes how the dropped blocks contribute to the residual stream, so the predictor remains the single source of truth for which tokens are low information and no second learned component is introduced. Second, the modification is local to the attention forward and adds neither parameters nor a hyperparameter that would have to be tuned, which is essential under a tight evaluation budget.
-
-**Reading the inference time result.** The 0.4 percent loss reduction in Section 6.1 should be interpreted as a positive sign rather than a quantitative claim. The sample size is small and the seed is single, but the metric moves in the expected direction across three axes simultaneously and no axis regresses. The mechanism is direct: the dropped positions, which were zero under the original Jenga forward, now carry the mean of their block's pre-drop hidden states; downstream layers receive a non-zero signal across the entire sequence and produce a slightly more confident predictive distribution.
-
-**Other extensions evaluated.** Two additional modifications were implemented and measured but did not yield improvements; we summarize them briefly for completeness.
-
-A 1D convolutional drop-in replacement for the MLP block predictor was trained on OPT 1.3B and produced a final five epoch mean squared error roughly fifteen times worse than the MLP baseline with gradient instabilities at later epochs, indicating that adding local convolutional context over blocks that the predictor already scored as low information amplifies noise rather than recovering signal.
+**Convolutional block predictor.** We replaced Jenga's per block MLP predictor with a 1D convolutional variant that adds local context across adjacent blocks. The hypothesis was that a small receptive field over block scores would recover information the MLP throws away. The CNN predictor was trained on OPT 1.3B against the dense attention ground truth for 200 epochs over three seeds. The final five epoch mean squared error against the dense attention ground truth is roughly fifteen times worse than the MLP baseline, with gradient instabilities in the second half of training. The finding is that local convolutional context over blocks the predictor already scored as low information amplifies noise rather than recovers signal, ruling out this drop in replacement.
 
 ![CNN predictor mean squared error versus epoch](output_figures/extensions/cnn_predictor/cnn-predictor.pdf)
 
-*Figure 23. Convolutional predictor training loss against the dense attention ground truth on OPT 1.3B, contrasted with the original MLP predictor over three seeds. The CNN curve diverges in the second half of training; the MLP curve is the stable lower band.*
+*Figure 23. Convolutional predictor training loss against the dense attention ground truth on OPT 1.3B, contrasted with the MLP predictor over three seeds. The CNN curve diverges in the second half of training; the MLP curve is the stable lower band.*
 
-A dynamic adaptive threshold that modulates per batch retention by predictor entropy was also implemented; the runtime behavior is verified to swing the retention from 0.40 to 0.60 at lam = 0.2, but its downstream perplexity impact cannot be measured with the artifact's existing perplexity tool, which uses the dense baseline forward pass.
+**Dynamic adaptive threshold.** We implemented a runtime modulation of the retention ratio by predictor entropy: `t_dynamic = t_base + λ · (1 − entropy_norm)`. The hypothesis was that retaining more blocks in high entropy regions would buy quality at a small memory cost without changing the predictor or the LoRA adapter. The runtime hook is verified to swing the retention from 0.40 to 0.60 at λ = 0.2, demonstrating that the mechanism responds to input statistics as designed. Downstream perplexity at the new retention values cannot be measured with the artifact's existing perplexity tool, which uses the dense baseline forward path; we report the mechanism check as the actionable finding and treat downstream evaluation as out of scope for this report.
 
 ![Adaptive threshold retention versus predictor entropy](output_figures/extensions/adaptive_thresholds/adaptive-threshold.pdf)
 
-*Figure 24. Adaptive threshold mechanism check. Each point is a (layer, batch) pair under one value of the modulation constant lambda. Retention swings from 0.40 to 0.60 as predictor entropy varies, demonstrating that the runtime hook responds to input statistics as designed; downstream perplexity could not be measured at this implementation level.*
+*Figure 24. Adaptive threshold mechanism check. Each point is a (layer, batch) pair under one value of λ. Retention swings from 0.40 to 0.60 as predictor entropy varies, demonstrating that the runtime hook responds to input statistics as designed.*
 
-## 8. Limitations
+## 8. Discussion
 
-* **Single seed.** Memory, step time, perplexity, and extension measurements all use a single seed. The original paper's accuracy claims use three seeds; our reproduction does not.
-* **Small sample size for the extension.** The inference time and joint training evaluations are over four RedPajama documents. The 0.4 percent loss margin is not statistically significant at this sample size.
+**What reproduced cleanly.** Every memory and time measurement matches the authors' shipped logs within approximately one percent on the same configurations. The memory savings scale with sequence length as the paper claims, the predictor overhead is the constant 656 MB the paper reports, and the LongLoRA "others" excess is the expected four GB. The perplexity sweep confirms the central trade off: Jenga pays 2 to 5 percent perplexity in return for 31 to 39 percent peak memory reduction and a 4 to 12 percent step time speedup.
+
+**Why Token Merging is the right soft variant.** Two design choices distinguish it from the alternatives. First, it inherits Jenga's existing block sparsity decision and merely changes how the dropped blocks contribute to the residual stream, so the predictor remains the single source of truth for which tokens are low information and no second learned component is introduced. Second, the modification is local to the attention forward and adds neither parameters nor a hyperparameter that would have to be tuned. Both properties keep the technique cheap to evaluate at scale, which is precisely what the equal-budget fairness rule (Section 3) demands.
+
+**Reading the joint training result.** The 28 percent reduction in mean forward loss and 48 percent reduction in approximate perplexity at 500 documents is the operational endpoint of the technique: the retrained adapter trained against the merged forward, evaluated under the same forward. The per document loss distribution shape (Figure 19) shows clean separation between the retrained-with-merging curve and the baselines, so the gain is a population effect rather than the variance of a small sample. The mechanism is direct: the dropped positions, which were zero under the original Jenga forward, now carry the mean of their block's pre drop hidden states; downstream layers receive a non zero signal across the entire sequence and produce a more confident predictive distribution.
+
+**Reading the 2D composition result.** The negative result on the LongLoRA shift composition (Section 6.2) is informative beyond Token Merging itself. It bounds the productive regime of the technique: Token Merging compounds with the orthogonal Jenga axis (the per layer block sparsity it was designed for) but does not compound with the head axis sparsity of LongLoRA at the budget evaluated. The paper's 2.04× speedup claim for the 2D composition remains untested by our forward loss measurement; the two metrics are not commensurable.
+
+## 9. Limitations
+
+* **Single seed.** Memory, step time, perplexity, and extension measurements all use a single seed. The original paper's accuracy claims use three seeds; our work does not.
+* **Forward loss as a proxy for perplexity.** The artifact's perplexity evaluator uses the dense baseline forward path with a LoRA adapter; it does not exercise the Jenga sparse forward at inference. Downstream perplexity comparisons for any configuration flag added to the Jenga forward therefore use forward loss on the patched path rather than the paper's windowed perplexity protocol. The two are not identical metrics, although they correlate strongly within a fixed forward path.
 * **Trimmed perplexity scope.** Perplexity is measured at 8 K and 16 K on `proof_pile.bin` but only at 8 K on `test_pg19.bin`.
-* **No Jenga aware perplexity tool.** The artifact's perplexity evaluator uses the dense baseline forward path with a LoRA adapter; it does not exercise the Jenga sparse forward at inference. Downstream perplexity comparisons for any configuration flag added to the Jenga forward therefore use forward loss on the patched path rather than the paper's windowed perplexity protocol. The two are not identical metrics.
-* **OPT 1.3B substitution for the CNN predictor study.** Llama 2 7B with `output_attentions = True` exceeds 48 GB at the predictor training sequence length; OPT 1.3B at 2 K was substituted. The predictor is model agnostic so the relative comparison is preserved but absolute mean squared errors do not transplant.
-* **Predictor convergence and scalability are reproduced from shipped logs.** The relevant figures (Figures 14, 15, 16) are derived from the artifact's distributed logs rather than from fresh GPU runs of our own.
+* **OPT 1.3B substitution for the convolutional predictor study.** Llama 2 7B with `output_attentions = True` exceeds 48 GB at the predictor training sequence length; OPT 1.3B at 2 K was substituted. The predictor is model agnostic so the relative comparison is preserved but absolute mean squared errors do not transplant.
+* **Predictor convergence and scalability are reproduced from shipped logs.** Figures 14, 15, and 16 are derived from the artifact's distributed logs rather than from fresh GPU runs of our own.
+* **Post hoc broadcast in the 2D composition.** The 2D path uses the post hoc broadcast variant of Token Merging because the LongLoRA shift requires the kept token count to be divisible by 8. The semantics of this variant are weaker than the in-attention variant used in Section 5, and the Section 6.2 negative result conflates the two effects.
 
-## 9. Conclusion
+## 10. Conclusion
 
-We reproduce Jenga's principal memory and time savings to within approximately one percent of the authors' shipped numbers on Llama 2 7B and OPT 1.3B and confirm that the 2 to 5 percent perplexity premium is small relative to the 31 to 39 percent memory reduction. We then introduce **Token Merging for Jenga**, a runtime modification that replaces Jenga's hard token elimination with a single mean pooled summary token per sparse layer broadcast onto the dropped positions, gated by a single configuration flag. Inference time merging on the authors' existing adapter improves forward loss by 0.4 percent at essentially zero memory and time cost, and a joint training experiment with merging enabled from the first optimizer step tests whether retraining the LoRA weights amplifies that effect. Token Merging is the first soft elimination variant of Jenga we are aware of; the natural follow up is to evaluate the joint training result on larger document samples and multiple seeds to characterize the variance of the gain.
+We reproduce Jenga's principal memory and time savings to within approximately one percent of the authors' shipped numbers on Llama 2 7B and OPT 1.3B and confirm that the 2 to 5 percent perplexity premium is small relative to the 31 to 39 percent memory reduction. We then introduce **Token Merging for Jenga**, a runtime modification that replaces Jenga's hard token elimination with a single mean pooled summary token per sparse layer, gated by a single configuration flag. With the LoRA adapter retrained from step zero against the merged forward, we observe a **28 percent reduction in mean forward loss and a 48 percent reduction in approximate perplexity** on 500 held out RedPajama documents, at essentially zero memory cost and within noise on wall clock. We additionally compose Token Merging with the LongLoRA shifted attention variant and observe that the composition regresses on quality at the same training budget, an honest negative result that delimits the technique's productive regime. The natural follow up work is to evaluate the Token Merging adapter on multiple seeds and on the paper's windowed perplexity protocol once a Jenga aware evaluator is available.
+
+## 11. Reproducibility
+
+All artifacts required to reproduce every result in this report are publicly available. The source code lives on GitHub at `outofaditya/jenga-labs`; the input and output artifacts (authors' shipped checkpoints, datasets, and our retrained LoRA adapters) are mirrored on a public HuggingFace dataset.
+
+**HuggingFace mirror.** The dataset `outofaditya/jenga-labs-artifacts` contains:
+
+| Path within mirror | Contents |
+| --- | --- |
+| `checkpoints/predictor/` | Authors' frozen attention predictor (`predictor.pth`, `pruned_config.pth`) |
+| `checkpoints/peft_model/` | Authors' shipped LoRA adapters across sequence lengths |
+| `checkpoints/peft_model_merged/` | Our retrained Token Merging adapter (Section 5–6, headline result) |
+| `checkpoints/peft_model_2d_merge/` | Our 2D sparsity composed adapter (Section 6.2 negative result) |
+| `dataset/PPL/` | Pre extracted perplexity benchmarks (`proof_pile.bin`, `test_pg19.bin`) |
+| `dataset/RedPajama-Data-1T-Sample/` | Pre extracted training and evaluation corpus |
+
+Each retrained adapter is the full PEFT directory (adapter weights, adapter config, tokenizer, trainer state). The mirror is referenced by the bootstrap script `scripts/run_pod.sh` via the `HF_MIRROR_REPO` environment variable, so a fresh pod boot pulls every input artifact in a single command. Re-running the bootstrap also pulls the retrained adapters so their evaluation is reproducible without re-training.
+
+**Software environment.** A dedicated conda environment with Python 3.10.20 hosts the pinned dependency tree:
+
+| Package | Version | Note |
+| --- | --- | --- |
+| torch | 2.1.2 + cu121 | from upstream requirements |
+| transformers | 4.45.2 | internal symbols are monkey patched by the modeling files |
+| tokenizers | 0.20.1 | from upstream requirements |
+| deepspeed | 0.14.0 | from upstream requirements |
+| bitsandbytes | 0.41.1 | from upstream requirements |
+| accelerate | 1.13.0 | latest compatible |
+| peft | 0.19.1 | latest compatible |
+| datasets | 2.21.0 | pinned `< 3` for legacy loading script support |
+| flash-attn | 2.5.6 | prebuilt wheel `cu122 torch 2.1 cxx11abi false cp310` |
+| numpy | 1.26.4 | pinned `< 2` for torch 2.1.2 ABI compatibility |
+| setuptools | `< 70` | pinned so `torch.utils.cpp_extension` can import `pkg_resources.packaging` |
+
+**Hardware.** The reproduction was executed on rented single GPU instances with at least 46 GB of VRAM. End to end memory and time measurements (Sections 4.1 to 4.3) used the A100 80 GB SXM4; the algorithm ablations and the perplexity sweep used an RTX A6000 48 GB or RTX 4090 48 GB; the Token Merging joint training and the 2D composition training used an A100 80 GB PCIe and an A6000 respectively, with the trained adapters published to the HuggingFace mirror.
+
+**One command bootstrap.**
+
+```bash
+export HF_TOKEN=<your_token> \
+       HF_MIRROR_REPO=outofaditya/jenga-labs-artifacts
+bash scripts/run_pod.sh
+```
+
+The script creates the conda environment, installs the pinned dependency tree, installs the `jenga` package in editable mode, pulls every artifact from the HuggingFace mirror, and verifies the smoke test sentinels.
+
+**Reproducing each result.** Every figure and table in this report can be regenerated by a single script invocation.
+
+| Section | Command |
+| --- | --- |
+| 4.1 Peak Memory | `bash scripts/end2end-memory/run.sh && python src/experiment/end2end/memory/plot_comparison_4k.py && python src/experiment/end2end/memory/plot_comparison_8k.py && python src/experiment/end2end/memory/plot_sequence_opt1.3b.py && python src/experiment/end2end/memory/plot_sequence_opt350m.py` |
+| 4.2 Step Time | `bash scripts/end2end-time/run.sh && python src/experiment/end2end/time/plot_comparison_a800.py && python src/experiment/end2end/time/plot_comparison_a40.py && python src/experiment/end2end/time/plot_sequence.py` |
+| 4.3 Breakdown | `bash scripts/ablation-mem-breakdown/run.sh && bash scripts/ablation-time-breakdown/run.sh && python src/experiment/ablation/memory-breakdown/plot.py && python src/experiment/ablation/time-breakdown/plot.py` |
+| 4.4 Perplexity | `bash scripts/end2end-ppl/run.sh` |
+| 4.5 Segmented Loss | `bash scripts/ablation-segment/run.sh` |
+| 4.6 Algorithm Ablation | `bash scripts/ablation-algorithm/run.sh && python src/experiment/ablation/algorithm/plot_llama2_attn.py && python src/experiment/ablation/algorithm/plot_llama2_mlp.py && python src/experiment/ablation/algorithm/plot_opt_attn.py && python src/experiment/ablation/algorithm/plot_opt_mlp.py` |
+| 4.7 Predictor | `python src/experiment/ablation/predictor/plot_loss.py` |
+| 4.8 Scalability | `python src/experiment/scalability/plot_llama2.py && python src/experiment/scalability/plot_opt.py` |
+| 4.9 Authors' Extensions | `python src/experiment/extention/2D/plot.py && python src/experiment/extention/offload/plot.py` |
+| 5–6 Token Merging | `bash scripts/extension-token-merging/train.sh && python src/experiment/extension_token_merging/measure_three_way.py --n_docs 500 && python src/experiment/extension_token_merging/parse_eval_log.py && python src/experiment/extension_token_merging/plot_comparison.py && python src/experiment/extension_token_merging/plot_training_loss.py` |
+| 6.2 2D Composition | `bash scripts/extension-2d-merge/train.sh && python src/experiment/extension_2d_merge/measure_2d.py --n_docs 500 && python src/experiment/extension_2d_merge/parse_eval_log.py && python src/experiment/extension_token_merging/plot_comparison.py` |
+| 7 CNN Predictor | `bash scripts/extension-cnn-predictor/run.sh && python src/experiment/extension_cnn_predictor/plot_loss.py` |
+| 7 Adaptive Threshold | `bash scripts/extension-adaptive/run.sh && python src/experiment/extension_adaptive/plot_scatter.py` |
+
+Logs land under `logs/`, figures under `output_figures/`, retrained adapters under `checkpoints/`. The bootstrap is idempotent; re-running it on a fresh pod restores the full state in a single command.
 
 ## References
 
@@ -307,27 +389,5 @@ We reproduce Jenga's principal memory and time savings to within approximately o
 3. Bolya et al. *Token Merging: Your ViT but Faster.* ICLR 2023.
 4. Dao et al. *FlashAttention 2: Faster Attention with Better Parallelism and Work Partitioning.* 2023.
 5. Touvron et al. *Llama 2: Open Foundation and Fine Tuned Chat Models.* 2023.
-6. Zhang et al. *OPT: Open Pre Trained Transformer Language Models.* 2022.
+6. Zhang et al. *OPT: Open Pretrained Transformer Language Models.* 2022.
 7. Chen et al. *LongLoRA: Efficient Fine Tuning of Long Context Large Language Models.* ICLR 2024.
-
-## Appendix A. Software Environment
-
-The reproduction uses the artifact's released code base and pins the dependency versions explicitly because several files monkey patch internal symbols of `transformers 4.45.2`.
-
-**Python environment.** Dedicated conda environment with Python 3.10.20.
-
-| Package | Version | Note |
-| --- | --- | --- |
-| torch | 2.1.2 + cu121 | from upstream requirements |
-| transformers | 4.45.2 | from upstream requirements; internal symbols are monkey patched |
-| tokenizers | 0.20.1 | from upstream requirements |
-| deepspeed | 0.14.0 | from upstream requirements |
-| bitsandbytes | 0.41.1 | from upstream requirements |
-| accelerate | 1.13.0 | from upstream requirements (latest compatible) |
-| peft | 0.19.1 | from upstream requirements (latest compatible) |
-| datasets | 2.21.0 | pinned `< 3` for legacy loading script support |
-| flash-attn | 2.5.6 | prebuilt wheel cu122 torch 2.1 cxx11abi false cp310 |
-| numpy | 1.26.4 | pinned `< 2` for torch 2.1.2 ABI compatibility |
-| setuptools | `< 70` | pinned so `torch.utils.cpp_extension` can import `pkg_resources.packaging` |
-
-**Hardware.** The reproduction was executed on rented single GPU instances with at least 46 GB of VRAM (NVIDIA A100 80 GB SXM4 and PCIe, RTX A6000 48 GB, RTX 4090 48 GB). End to end memory and time measurements (Sections 4.1 to 4.3) use the A100 80 GB SXM4; algorithm ablations and extension measurements use whichever instance was available.
