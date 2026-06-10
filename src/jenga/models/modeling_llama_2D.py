@@ -527,7 +527,7 @@ class LlamaFlashAttention2(LlamaAttention):
 
         bsz, q_len, _ = hidden_states.size()
         q_len_now = q_len
-        if self.layer_idx != 31: 
+        if self.layer_idx != 31:
             with torch.no_grad():
                 hidden_states_ = hidden_states.clone()
                 predict_attn = self.predictor(hidden_states_)
@@ -539,19 +539,47 @@ class LlamaFlashAttention2(LlamaAttention):
                     q_len_now = sum_q.size(1)
                 else:
                     q_len_now = int(sum_q.size(1) * self.config.sparse)
-                                    
-                _, idx = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
-                idx = idx.sort().values
-                # print(f"layer {self.layer_idx}, {idx}")
-                base = torch.arange(64, device=idx.device).view(1, 1, 64)  # (1, 1, 64)
-                expanded_idx = idx[..., None] * 64 + base  # (bsz, q_len_now, 64)
+
+                _, kept_block_idx = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
+                kept_block_idx = kept_block_idx.sort().values
+                num_blocks_total = sum_q.size(1)
+                # Extension D (I5): post hoc broadcast merging in the 2D path.
+                # The shifted attention requires q_len_now divisible by 8, so we
+                # cannot append the merged token to the attention input as in
+                # modeling_llama.py. Instead we compute the merged vector from
+                # the pre drop hidden states and broadcast it onto the dropped
+                # positions in the layer output, leaving the kept tokens'
+                # attention path untouched.
+                merge_eliminated = (
+                    self.layer_idx >= 15
+                    and bool(getattr(self.config, "merge_eliminated", False))
+                    and q_len_now < num_blocks_total
+                )
+                if merge_eliminated:
+                    keep_mask = torch.zeros(bsz, num_blocks_total, dtype=torch.bool, device=kept_block_idx.device)
+                    keep_mask.scatter_(1, kept_block_idx, True)
+                    dropped_block_idx = torch.nonzero(~keep_mask[0], as_tuple=True)[0]
+
+                base = torch.arange(64, device=kept_block_idx.device).view(1, 1, 64)  # (1, 1, 64)
+                expanded_idx = kept_block_idx[..., None] * 64 + base  # (bsz, q_len_now, 64)
                 idx = expanded_idx.view(-1)  # (bsz, q_len_now * 64)
-                
-                q_len_now *= 64   
+
+                if merge_eliminated:
+                    drop_token_idx = (dropped_block_idx[:, None] * 64 +
+                                       torch.arange(64, device=kept_block_idx.device).view(1, 64)).view(-1)
+
+                q_len_now *= 64
                 del sum_q, hidden_states_
-            
+
+            # Pre compute the merged vector outside no_grad so gradients flow
+            # back to the dropped block hidden states.
+            if merge_eliminated:
+                dropped_hidden = hidden_states[:, drop_token_idx, :]
+                merged_vec = dropped_hidden.mean(dim=1, keepdim=True)  # (bsz, 1, hidden)
             # query_states = query_states[:, :, idx, :]
             hidden_states = hidden_states[:, idx, :]
+        else:
+            merge_eliminated = False
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
@@ -666,10 +694,15 @@ class LlamaFlashAttention2(LlamaAttention):
 
         if not output_attentions:
             attn_weights = None
-        if self.layer_idx != 31: 
+        if self.layer_idx != 31:
             output = torch.zeros((bsz, q_len, attn_output.shape[-1]), device=attn_output.device, dtype=attn_output.dtype)
             output[0].scatter_(0, idx.unsqueeze(1).expand(-1, attn_output.size(-1)), attn_output[0])
-        
+            if merge_eliminated:
+                # Broadcast the merged vector onto every dropped position so
+                # the residual stream carries the mean of the dropped block
+                # hidden states instead of zero.
+                output[0, drop_token_idx, :] = merged_vec[0]
+
             return output, attn_weights, past_key_value
         return attn_output, attn_weights, past_key_value
 
