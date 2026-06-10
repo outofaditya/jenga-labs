@@ -77,5 +77,5 @@ plt.xticks([1, 2, 4], fontsize=14)
 plt.grid(True, linestyle='--', alpha=0.6, linewidth=0.5)
 plt.tight_layout()
 
-plt.savefig("./output_figures/scalability/exp-scalability-opt.pdf")
+plt.savefig("./output_figures/scalability/scalability-opt.pdf")
 plt.close()

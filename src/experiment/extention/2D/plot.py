@@ -93,5 +93,5 @@ ax.tick_params(axis='y', labelsize=14)
 ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
-plt.savefig('output_figures/extension/2d/exp-extension-2d.pdf')
+plt.savefig('output_figures/extension/2d/2d-sparsity.pdf')
 plt.close()

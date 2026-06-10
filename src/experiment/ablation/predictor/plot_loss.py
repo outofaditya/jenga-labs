@@ -40,4 +40,4 @@ plt.xticks(fontsize=12)
 plt.yticks(fontsize=12)
  
 plt.tight_layout()
-plt.savefig('output_figures/ablations/predictor/exp-ablation-predictor-loss.pdf', bbox_inches='tight')
+plt.savefig('output_figures/ablations/predictor/predictor-loss.pdf', bbox_inches='tight')

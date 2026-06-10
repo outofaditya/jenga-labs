@@ -88,5 +88,5 @@ ax.tick_params(axis='y', labelsize=14)
 ax.grid(axis='y', linestyle='--', alpha=0.7)
 
 plt.tight_layout()
-plt.savefig('output_figures/extension/offload/exp-extension-offload.pdf')
+plt.savefig('output_figures/extension/offload/offload.pdf')
 plt.close()

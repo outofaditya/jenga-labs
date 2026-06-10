@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", default="logs/extensions/adaptive_thresholds/retention.csv")
-    parser.add_argument("--out", default="output_figures/extensions/adaptive_thresholds/scatter.pdf")
+    parser.add_argument("--out", default="output_figures/extensions/adaptive_thresholds/adaptive-threshold.pdf")
     args = parser.parse_args()
 
     by_lam = defaultdict(list)

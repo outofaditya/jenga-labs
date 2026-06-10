@@ -2,13 +2,13 @@
 
 Two figures.
 
-  exp-extension-token-merging-perdoc.pdf
+  loss-landscape.pdf
     The loss landscape: per held out document forward loss, sorted
     ascending within each state and plotted as a beady line (markers
     sampled every 25 documents so 500 points read clearly). The shape
     of each curve is the loss distribution for that state.
 
-  exp-extension-token-merging-comparison.pdf
+  comparison.pdf
     Normalized Loss, PPL, and Peak Memory across the three states as a
     grouped bar chart, in the idiom of the end to end memory comparison
     figure.
@@ -152,9 +152,9 @@ def main():
     by_state = collect_perdoc(args.perdoc_csv, args.perdoc_2d_csv)
 
     plot_perdoc(by_state,
-                os.path.join(args.out_dir, "exp-extension-token-merging-perdoc.pdf"))
+                os.path.join(args.out_dir, "loss-landscape.pdf"))
     plot_comparison(means,
-                    os.path.join(args.out_dir, "exp-extension-token-merging-comparison.pdf"))
+                    os.path.join(args.out_dir, "comparison.pdf"))
 
 
 if __name__ == "__main__":

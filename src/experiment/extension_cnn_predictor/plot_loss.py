@@ -12,7 +12,7 @@ import numpy as np
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", default="logs/extensions/cnn_predictor/loss.csv")
-    parser.add_argument("--out", default="output_figures/extensions/cnn_predictor/loss_curve.pdf")
+    parser.add_argument("--out", default="output_figures/extensions/cnn_predictor/cnn-predictor.pdf")
     args = parser.parse_args()
 
     rows = defaultdict(list)

@@ -120,4 +120,4 @@ ax.tick_params(axis='x', labelsize=14)
 ax.set_xlim(0, 1.2 * max([d['total_mem'] for d in data]))
 
 plt.tight_layout()
-plt.savefig('output_figures/ablations/memory-breakdown/exp-ablation-mem-breakdown.pdf', bbox_inches='tight')
+plt.savefig('output_figures/ablations/memory-breakdown/memory-breakdown.pdf', bbox_inches='tight')

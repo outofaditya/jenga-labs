@@ -48,5 +48,5 @@ ax2.set_ylim(0, 1)
 ax2.plot(layers, thresholds, color='black', marker='o', markersize=3, markerfacecolor=colors[3], markeredgewidth=0.5, zorder=100, linewidth=1)
 
 plt.tight_layout()
-plt.savefig("output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-mlp.pdf")
+plt.savefig("output_figures/ablations/algorithm/algorithm-llama2-mlp.pdf")
 plt.close()

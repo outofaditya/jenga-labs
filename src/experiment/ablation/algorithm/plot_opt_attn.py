@@ -48,5 +48,5 @@ print(f"threshold_avg: {threshold_avg}")
 print(f"memory_avg: {memory_avg}")
 
 plt.tight_layout()
-plt.savefig("output_figures/ablations/algorithm/exp-ablation-algorithm-opt-attn.pdf")
+plt.savefig("output_figures/ablations/algorithm/algorithm-opt-attn.pdf")
 plt.close()

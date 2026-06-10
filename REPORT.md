@@ -56,15 +56,15 @@ The Jenga vs LoRA gap widens with sequence length, consistent with the paper's c
 
 *Figure 1. Peak GPU memory for LoRA, LongLoRA, and Jenga at 4 K tokens on Llama 2 7B and OPT 1.3B.*
 
-![Peak memory at 8 K context](output_figures/end2end/memory/exp-end2end-memory-8K-comparison.pdf)
+![Peak memory at 8 K context](output_figures/end2end/memory/memory-8k.pdf)
 
 *Figure 2. Peak GPU memory at 8 K tokens on the same models.*
 
-![OPT 1.3B peak memory across sequence lengths](output_figures/end2end/memory/exp-end2end-memory-opt1.3b-sequence.pdf)
+![OPT 1.3B peak memory across sequence lengths](output_figures/end2end/memory/memory-opt1.3b.pdf)
 
 *Figure 3. Peak GPU memory for OPT 1.3B across sequence lengths 4 K to 16 K, comparing the three methods. The Jenga advantage widens with context.*
 
-![OPT 350m peak memory across sequence lengths](output_figures/end2end/memory/exp-end2end-memory-opt350m-sequence.pdf)
+![OPT 350m peak memory across sequence lengths](output_figures/end2end/memory/memory-opt350m.pdf)
 
 *Figure 4. Peak GPU memory for OPT 350m across the same sequence lengths, confirming the trend at smaller model size.*
 
@@ -81,15 +81,15 @@ Median per step total time (forward, backward, and optimizer step), excluding th
 
 The 1.12x Llama 2 7B 8 K speedup matches the paper within one percent. The step time advantage is smaller than the memory advantage because Jenga reduces the token count entering attention and the MLP, which scales activation memory near linearly with token count, while the weight bound matmuls have a fixed cost.
 
-![Execution time comparison on A100 80 GB](output_figures/end2end/time/exp-end2end-time-a800-comparison.pdf)
+![Execution time comparison on A100 80 GB](output_figures/end2end/time/time-a100.pdf)
 
 *Figure 5. Median per step training time for LoRA, LongLoRA, and Jenga on Llama 2 7B and OPT 1.3B at 4 K and 8 K, on the A100 80 GB device.*
 
-![Execution time comparison on A40](output_figures/end2end/time/exp-end2end-time-a40-comparison.pdf)
+![Execution time comparison on A40](output_figures/end2end/time/time-a40.pdf)
 
 *Figure 6. The same configurations measured on an A40 device. The Jenga speedup is preserved across hardware; the absolute step times scale with the device's available memory bandwidth.*
 
-![Per step time across sequence lengths](output_figures/end2end/time/exp-end2end-time-sequence.pdf)
+![Per step time across sequence lengths](output_figures/end2end/time/time-seq.pdf)
 
 *Figure 7. Per step time across sequence lengths 4 K to 64 K on Llama 2 7B and Llama 3 8B. Jenga's wall clock advantage compounds with context.*
 
@@ -109,11 +109,11 @@ Llama 2 7B peak memory was decomposed into model state (base weights + LoRA adap
 
 Three observations the decomposition makes visible. Activations dominate the savings: at 8 K, Jenga cuts activations from 59,438 MB to 30,827 MB, while model state is essentially unchanged. The predictor overhead is constant at 656 MB across every Jenga configuration. LongLoRA carries roughly four extra GB of others, attributable to additional buffers retained by its shifted attention reordering.
 
-![Memory breakdown](output_figures/ablations/memory-breakdown/exp-ablation-mem-breakdown.pdf)
+![Memory breakdown](output_figures/ablations/memory-breakdown/memory-breakdown.pdf)
 
 *Figure 8. Decomposition of Llama 2 7B peak memory at 8 K across LoRA, LongLoRA, and Jenga, and across Jenga sequence lengths 8 K to 16 K.*
 
-![Per step time breakdown](output_figures/ablations/time-breakdown/exp-ablation-time-breakdown.pdf)
+![Per step time breakdown](output_figures/ablations/time-breakdown/time-breakdown.pdf)
 
 *Figure 9. Per step wall clock decomposition into attention, MLP, predictor, and others across the same configurations. The predictor contributes a small fixed cost; the savings come from the reduced attention and MLP token counts.*
 
@@ -149,19 +149,19 @@ Both pickles reproduce on the artifact pod and render at `docs.pytorch.org/memor
 
 Attention only and MLP only sparsity ablations were run for Llama 2 7B and OPT 6.7B:
 
-![Llama 2 7B attention ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-attn.pdf)
+![Llama 2 7B attention ablation](output_figures/ablations/algorithm/algorithm-llama2-attn.pdf)
 
 *Figure 10. Memory versus attention sparsity ratio on Llama 2 7B.*
 
-![Llama 2 7B MLP ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-llama2-mlp.pdf)
+![Llama 2 7B MLP ablation](output_figures/ablations/algorithm/algorithm-llama2-mlp.pdf)
 
 *Figure 11. Memory versus MLP sparsity ratio on Llama 2 7B.*
 
-![OPT 6.7B attention ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-opt-attn.pdf)
+![OPT 6.7B attention ablation](output_figures/ablations/algorithm/algorithm-opt-attn.pdf)
 
 *Figure 12. Memory versus attention sparsity ratio on OPT 6.7B.*
 
-![OPT 6.7B MLP ablation](output_figures/ablations/algorithm/exp-ablation-algorithm-opt-mlp.pdf)
+![OPT 6.7B MLP ablation](output_figures/ablations/algorithm/algorithm-opt-mlp.pdf)
 
 *Figure 13. Memory versus MLP sparsity ratio on OPT 6.7B.*
 
@@ -171,7 +171,7 @@ The curves reproduce the paper's qualitative shape: a sharp memory descent at lo
 
 The attention predictor is trained offline against pooled attention scores produced by a frozen base model. The loss curve below confirms the paper's rapid convergence claim: the predictor reaches its asymptote within the first one hundred epochs and is stable for the remainder of training.
 
-![Predictor training loss](output_figures/ablations/predictor/exp-ablation-predictor-loss.pdf)
+![Predictor training loss](output_figures/ablations/predictor/predictor-loss.pdf)
 
 *Figure 14. Predictor training loss curves across Llama 2 7B and OPT 6.7B on RedPajama and a held out academic mix. The asymptote within one hundred epochs supports the paper's "elastic pattern" claim that the predictor is cheap to train once and reusable across downstream fine tunes.*
 
@@ -179,11 +179,11 @@ The attention predictor is trained offline against pooled attention scores produ
 
 The scalability sweep runs the multi GPU variant of the Jenga training driver across one, two, four, and eight A100s and reports near linear speedup. We reproduce the curves on the shipped logs and confirm the qualitative scaling claim.
 
-![Llama 2 7B scalability](output_figures/scalability/exp-scalability-llama2.pdf)
+![Llama 2 7B scalability](output_figures/scalability/scalability-llama2.pdf)
 
 *Figure 15. Multi GPU scaling for Llama 2 7B training under Jenga across one to eight A100 80 GB devices. The slope is close to ideal until eight devices, where inter device communication begins to dominate.*
 
-![OPT 6.7B scalability](output_figures/scalability/exp-scalability-opt.pdf)
+![OPT 6.7B scalability](output_figures/scalability/scalability-opt.pdf)
 
 *Figure 16. The same scaling sweep on OPT 6.7B. The trend is consistent with Llama.*
 
@@ -191,11 +191,11 @@ The scalability sweep runs the multi GPU variant of the Jenga training driver ac
 
 The paper teases two further extensions briefly. We reproduce the figures from the shipped logs so the reader has the visual reference; our Section 5 extension (Token Merging) is independent of these and our Section 6.1 row 4 and 5 evaluate the 2D variant directly.
 
-![2D sparsity speedup](output_figures/extension/2d/exp-extension-2d.pdf)
+![2D sparsity speedup](output_figures/extension/2d/2d-sparsity.pdf)
 
 *Figure 17. The 2D sparsity composition of Jenga with LongLoRA shifted attention, reported by the authors as a 2.04× wall clock speedup over LoRA on Llama 2 7B. This figure is the direct motivation for the Section 6.1 row 4 and 5 measurements.*
 
-![CPU offload extension](output_figures/extension/offload/exp-extension-offload.pdf)
+![CPU offload extension](output_figures/extension/offload/offload.pdf)
 
 *Figure 18. CPU offload extension reported by the authors. Activations are streamed to CPU during forward and recomputed during backward, trading wall clock for additional memory headroom. Cited here for completeness; not used in our extension work.*
 
@@ -249,19 +249,19 @@ The 500 document sample size gives every row of this comparison statistical weig
 
 Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
 
-![Per document forward loss distribution across the states](output_figures/extensions/token_merging/exp-extension-token-merging-perdoc.pdf)
+![Per document forward loss distribution across the states](output_figures/extensions/token_merging/loss-landscape.pdf)
 
 *Figure 19. Loss landscape across 500 held out documents. For each state, per document forward loss is sorted ascending and plotted as a beady line, so the shape of each curve is that state's loss distribution. The four curves separate cleanly with negligible overlap, confirming the headline numbers of Section 6.1 reflect a population effect rather than small sample variance.*
 
-![Normalized loss, PPL, and peak memory across the states](output_figures/extensions/token_merging/exp-extension-token-merging-comparison.pdf)
+![Normalized loss, PPL, and peak memory across the states](output_figures/extensions/token_merging/comparison.pdf)
 
 *Figure 20. Normalized mean loss, PPL, and peak GPU memory across the states, each metric scaled so its maximum is 1.0. Peak memory is essentially constant; loss and PPL move together but at different scales.*
 
-![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
+![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train-loss-i4.pdf)
 
 *Figure 21. I4 LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in light grey, smoothed ten step moving average in dark blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
 
-![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train_loss_2d.pdf)
+![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train-loss-i5.pdf)
 
 *Figure 22. I5 LoRA adapter training loss on the 2D sparsity model (Jenga token sparsity composed with LongLoRA shifted attention) with post hoc broadcast merging active from the first optimizer step. The training trace is noisier and converges to a higher band (approximately 2.4–2.7) than the I4 curve in Figure 21. The shifted attention's head split contributes most of the variance.*
 
@@ -277,13 +277,13 @@ Mean forward wall clock is within noise across the three states; it is reported 
 
 A 1D convolutional drop-in replacement for the MLP block predictor was trained on OPT 1.3B and produced a final five epoch mean squared error roughly fifteen times worse than the MLP baseline with gradient instabilities at later epochs, indicating that adding local convolutional context over blocks that the predictor already scored as low information amplifies noise rather than recovering signal.
 
-![CNN predictor mean squared error versus epoch](output_figures/extensions/cnn_predictor/loss_curve.pdf)
+![CNN predictor mean squared error versus epoch](output_figures/extensions/cnn_predictor/cnn-predictor.pdf)
 
 *Figure 23. Convolutional predictor training loss against the dense attention ground truth on OPT 1.3B, contrasted with the original MLP predictor over three seeds. The CNN curve diverges in the second half of training; the MLP curve is the stable lower band.*
 
 A dynamic adaptive threshold that modulates per batch retention by predictor entropy was also implemented; the runtime behavior is verified to swing the retention from 0.40 to 0.60 at lam = 0.2, but its downstream perplexity impact cannot be measured with the artifact's existing perplexity tool, which uses the dense baseline forward pass.
 
-![Adaptive threshold retention versus predictor entropy](output_figures/extensions/adaptive_thresholds/scatter.pdf)
+![Adaptive threshold retention versus predictor entropy](output_figures/extensions/adaptive_thresholds/adaptive-threshold.pdf)
 
 *Figure 24. Adaptive threshold mechanism check. Each point is a (layer, batch) pair under one value of the modulation constant lambda. Retention swings from 0.40 to 0.60 as predictor entropy varies, demonstrating that the runtime hook responds to input statistics as designed; downstream perplexity could not be measured at this implementation level.*
 

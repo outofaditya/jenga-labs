@@ -51,7 +51,7 @@ def moving_average(values, window):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log", default="logs/extensions/token_merging/train-llama2-8192-a100.log")
-    parser.add_argument("--out", default="output_figures/extensions/token_merging/train_loss.pdf")
+    parser.add_argument("--out", default="output_figures/extensions/token_merging/train-loss-i4.pdf")
     parser.add_argument("--window", type=int, default=10)
     args = parser.parse_args()
 

@@ -106,4 +106,4 @@ ax.set_xticklabels(seq_lengths)
 ax.set_xlabel("Sequence Length", fontsize=14)
 
 plt.tight_layout()
-plt.savefig("output_figures/end2end/time/exp-end2end-time-sequence.pdf")
+plt.savefig("output_figures/end2end/time/time-seq.pdf")

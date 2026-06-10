@@ -110,6 +110,6 @@ ax.tick_params(axis='x', labelsize=14)
 ax.set_xlim(0, 1.2 * max([d['total_time'] for d in data]))
 
 plt.tight_layout()
-plt.savefig('output_figures/ablations/time-breakdown/exp-ablation-time-breakdown.pdf', bbox_inches='tight')
+plt.savefig('output_figures/ablations/time-breakdown/time-breakdown.pdf', bbox_inches='tight')
 
 
