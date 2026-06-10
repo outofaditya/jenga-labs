@@ -52,7 +52,7 @@ Llama 2 7B and OPT 1.3B were profiled under LoRA, LongLoRA, and Jenga at sequenc
 
 The Jenga vs LoRA gap widens with sequence length, consistent with the paper's claim that the savings compound at long context. Authors' 8 K Llama 2 7B values are 73.1 GB (LoRA) and 44.5 GB (Jenga); our 72.5 GB and 44.0 GB are within approximately one percent.
 
-![Peak memory at 4 K context](output_figures/end2end/memory/exp-end2end-memory-4K-comparison.pdf)
+![Peak memory at 4 K context](output_figures/end2end/memory/memory-4k.pdf)
 
 *Figure 1. Peak GPU memory for LoRA, LongLoRA, and Jenga at 4 K tokens on Llama 2 7B and OPT 1.3B.*
 
