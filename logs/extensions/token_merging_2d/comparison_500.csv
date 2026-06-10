@@ -1,0 +1,3 @@
+label,mode,n_docs,mean_loss,ppl_approx,peak_memory_mb,mean_forward_s
+"2D sparsity, no merging",baseline_2d,500,3.039984375,20.904916593219102,19805.046875,1.329105668067932
+"2D sparsity, token merging",merged_2d,500,3.326453125,27.83942342659104,19804.546875,1.3429586715698243

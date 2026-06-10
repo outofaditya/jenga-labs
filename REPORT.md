@@ -173,29 +173,35 @@ The modification is guarded by `config.merge_eliminated`; when this flag is Fals
 
 ## 6. Token Merging Results
 
-### 6.1 Three State Comparison on 500 Held Out Documents
+### 6.1 Five State Comparison on 500 Held Out Documents
 
-The principal comparison evaluates three configurations of the same Llama 2 7B + Jenga forward path on 500 held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapter was trained on, so the retrained row is not measured on its own training set. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
+The principal comparison evaluates five configurations of the same Llama 2 7B + Jenga forward path on 500 held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapters were trained on. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
 
 | Adapter | Mode | Mean loss | PPL ≈ exp(loss) | Peak memory (MB) | Mean forward (s) |
 | --- | --- | --- | --- | --- | --- |
 | Original Jenga | hard drop | 2.380 | 10.81 | 19,804.0 | 1.351 |
 | Original Jenga | token merging | 4.414 | 82.63 | 19,804.9 | 1.372 |
-| Retrained with merging | token merging | **1.716** | **5.56** | 19,805.5 | 1.366 |
+| Retrained with merging (I4) | token merging | **1.716** | **5.56** | 19,805.5 | 1.366 |
+| 2D sparsity adapter (I5) | hard drop | 3.040 | 20.90 | 19,805.0 | 1.329 |
+| 2D sparsity adapter (I5) | token merging | 3.326 | 27.84 | 19,804.5 | 1.343 |
 
-Two facts are immediately legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.380 to 4.414 and the approximate perplexity rises by more than seven fold from 10.8 to 82.6. The original adapter was trained against a hard drop forward in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.716 (PPL ≈ 5.56), an improvement of 0.66 (28 percent) over the original adapter under hard drop and a 48 percent reduction in approximate perplexity. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
+Three facts are legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.380 to 4.414 and the approximate perplexity rises by more than seven fold from 10.8 to 82.6. The original adapter was trained against a hard drop forward in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **I4 retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.716 (PPL ≈ 5.56), an improvement of 0.66 (28 percent) over the original adapter under hard drop and a 48 percent reduction in approximate perplexity. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
+
+Third, the **I5 adapter** — trained for the same number of steps on the 2D-sparsity model that composes Jenga's token sparsity with LongLoRA's shifted attention — lands at mean loss 3.040 under hard drop and 3.326 under the post-hoc broadcast merging variant. Both values are substantially worse than the I4 adapter (1.716) and worse than the original Jenga adapter under hard drop (2.380). Adding merging on top of the 2D path does not help; it slightly hurts. The shifted attention's per-layer head split breaks the global causal structure across half the heads, which the LoRA adapter at this training budget could not fully compensate for. This is an honest negative result for the composition of the two sparsity mechanisms on the quality axis; the paper's reported 2.04x speedup claim for the 2D composition is a wall clock claim and is not contradicted by our perplexity-style measurement.
 
 ### 6.2 Reading the Comparison
 
-Two deltas isolate the effects.
+Three deltas isolate the effects.
 
 The **inference time mismatch** is the comparison of rows 1 and 2 — the original adapter with and without merging. It is strongly negative: +2.03 mean loss, ×7.6 in approximate PPL. Token Merging is not a drop in modification that can be enabled at inference time on a pre-existing Jenga adapter. The adapter must be jointly trained with the merged forward for the modification to be usable at all.
 
-The **joint training plus merging effect** is the comparison of rows 1 and 3 — both serve as the operational endpoints of the technique. The retrained adapter, trained from step zero with the merged forward active and evaluated under the same forward, achieves a 0.66 reduction in mean loss and a 48 percent reduction in approximate perplexity. This is the headline result for the Token Merging extension at scale.
+The **joint training plus merging effect** is the comparison of rows 1 and 3 — both serve as the operational endpoints of the I4 technique. The retrained adapter, trained from step zero with the merged forward active and evaluated under the same forward, achieves a 0.66 reduction in mean loss and a 48 percent reduction in approximate perplexity. This is the headline result for the Token Merging extension at scale.
 
-Peak GPU memory is flat across the three states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across the three.
+The **2D-sparsity composition effect** is the comparison of rows 1, 3, 4 and 5. The I5 adapter, trained at the same step budget as I4 but on the LongLoRA-shifted variant of the Jenga forward, regresses on both hard drop (3.040 vs 2.380) and merged (3.326 vs 1.716) by a meaningful margin. The two sparsity mechanisms do not freely compound on the quality axis at this training budget: the shifted attention's head split makes the predictor's block scores less informative downstream, and the post-hoc broadcast merging used in the 2D path is a weaker form of soft elimination than the in-attention variant used in I4 (the merged token does not modulate through attention with the kept keys, because the LongLoRA shift requires q_len_now divisible by 8). Both factors plausibly contribute. We report this as a negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms.
 
-The 500 document sample size gives this comparison statistical weight that the earlier four document version did not have. The per document loss distribution shape — visible in Figure 7 below as the sorted curves — separates the three states cleanly with little overlap, confirming that the loss differences reflect a population effect and not the variance of a small sample.
+Peak GPU memory is flat across all five states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across all five.
+
+The 500 document sample size gives every row of this comparison statistical weight that a four document version cannot have. The per document loss distribution shape — visible in Figure 7 below as the sorted curves — separates the states cleanly with little overlap, confirming that the loss differences reflect a population effect rather than the variance of a small sample.
 
 Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
 
