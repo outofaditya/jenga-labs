@@ -215,7 +215,11 @@ Mean forward wall clock is within noise across the three states; it is reported 
 
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
 
-*Figure 9. LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in dashed dark grey; ten step moving average in blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+*Figure 9. I4 LoRA adapter training loss with token merging enabled from the first optimizer step. Raw per logging step loss in light grey, smoothed ten step moving average in dark blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+
+![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train_loss_2d.pdf)
+
+*Figure 10. I5 LoRA adapter training loss on the 2D sparsity model (Jenga token sparsity composed with LongLoRA shifted attention) with post hoc broadcast merging active from the first optimizer step. The training trace is noisier and converges to a higher band (approximately 2.4–2.7) than the I4 curve in Figure 9. The shifted attention's head split contributes most of the variance.*
 
 ## 7. Discussion
 
