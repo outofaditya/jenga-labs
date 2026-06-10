@@ -93,7 +93,7 @@ The 1.12x Llama 2 7B 8 K speedup matches the paper within one percent. The step 
 
 *Figure 7. Per step time across sequence lengths 4 K to 64 K on Llama 2 7B and Llama 3 8B. Jenga's wall clock advantage compounds with context.*
 
-### 4.3 Memory Breakdown (Paper Figure 14, upper)
+### 4.3 Memory and Time Breakdown (Paper Figure 14)
 
 Llama 2 7B peak memory was decomposed into model state (base weights + LoRA adapter + AdamW fp32 optimizer states), activations, predictor overhead, and others (workspace and fragmentation):
 
