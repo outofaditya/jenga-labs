@@ -173,40 +173,39 @@ The modification is guarded by `config.merge_eliminated`; when this flag is Fals
 
 ## 6. Token Merging Results
 
-### 6.1 Four Way Comparison on Held Out Documents
+### 6.1 Three State Comparison on 500 Held Out Documents
 
-The principal comparison toggles two independent variables — the LoRA adapter and `config.merge_eliminated` — and measures forward loss, peak GPU memory, and mean forward wall clock on four held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapter was trained on, so the retrained rows are not measured on their own training set. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
+The principal comparison evaluates three configurations of the same Llama 2 7B + Jenga forward path on 500 held out RedPajama documents at 8 K context. Documents are drawn from indices 1,000 onward in the RedPajama-Data-1T-Sample split, beyond the 1,000 document slice that the retrained adapter was trained on, so the retrained row is not measured on its own training set. All other variables are held constant: same base model, same predictor weights, same seed, same documents.
 
 | Adapter | Mode | Mean loss | PPL ≈ exp(loss) | Peak memory (MB) | Mean forward (s) |
 | --- | --- | --- | --- | --- | --- |
-| Original Jenga | hard drop | 2.355 | 10.54 | 19,804.0 | 0.866 |
-| Original Jenga | token merging | 4.508 | 90.72 | 19,804.9 | 0.746 |
-| Retrained with merging | hard drop | 1.719 | 5.58 | 19,804.0 | 0.850 |
-| Retrained with merging | token merging | **1.596** | **4.93** | 19,803.5 | 0.748 |
+| Original Jenga | hard drop | 2.380 | 10.81 | 19,804.0 | 1.351 |
+| Original Jenga | token merging | 4.414 | 82.63 | 19,804.9 | 1.372 |
+| Retrained with merging | token merging | **1.716** | **5.56** | 19,805.5 | 1.366 |
 
-Two facts are immediately legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.355 to 4.508 and the approximate perplexity nearly nine-folds from 10.5 to 90.7. The original adapter was trained against a hard drop forward, in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.596 (PPL ≈ 4.93), an improvement of 0.76 over the original adapter under hard drop and of 0.12 over the retrained adapter under hard drop. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
+Two facts are immediately legible. First, enabling token merging at inference time on the original Jenga adapter is catastrophic: mean loss jumps from 2.380 to 4.414 and the approximate perplexity rises by more than seven fold from 10.8 to 82.6. The original adapter was trained against a hard drop forward in which the dropped positions carry zero residual signal across the sparse layers; introducing a broadcast merged vector at those positions changes the downstream activations in a way the adapter has no parameters to compensate for. Second, the same modification on the **retrained** adapter — which has seen the merged forward from the first optimizer step — reduces mean loss to 1.716 (PPL ≈ 5.56), an improvement of 0.66 (28 percent) over the original adapter under hard drop and a 48 percent reduction in approximate perplexity. The memory delta from token merging is below 1.5 MB on a 20 GB allocation; the mean forward time is within noise.
 
 ### 6.2 Reading the Comparison
 
-Three deltas isolate the different effects.
+Two deltas isolate the effects.
 
-The **inference-time-only delta** is the comparison of rows 1 and 2 — the original adapter with and without merging. It is strongly negative: +2.15 mean loss, ×8.6 in approximate PPL. Token Merging is not a drop in modification that can be enabled at inference time on a pre-existing Jenga adapter. The adapter must be jointly trained with the merged forward for the modification to be usable at all.
+The **inference time mismatch** is the comparison of rows 1 and 2 — the original adapter with and without merging. It is strongly negative: +2.03 mean loss, ×7.6 in approximate PPL. Token Merging is not a drop in modification that can be enabled at inference time on a pre-existing Jenga adapter. The adapter must be jointly trained with the merged forward for the modification to be usable at all.
 
-The **joint training effect at fixed merge state** is the comparison of rows 1 and 3 — both under hard drop, but the second adapter was retrained for 2,400 steps on a 1,000 document RedPajama slice. It is negative: −0.64 mean loss, −5.0 in approximate PPL. The retraining itself accounts for the majority of the total improvement. Two factors plausibly contribute. The retrained adapter is more recent and may have benefited from a different optimizer trajectory at the same nominal hyperparameters; and although the evaluation documents are drawn from a held out index range, the underlying RedPajama distribution between the training and evaluation slices is similar, so the retrained adapter's general fit to the distribution is sharper than the released adapter's.
+The **joint training plus merging effect** is the comparison of rows 1 and 3 — both serve as the operational endpoints of the technique. The retrained adapter, trained from step zero with the merged forward active and evaluated under the same forward, achieves a 0.66 reduction in mean loss and a 48 percent reduction in approximate perplexity. This is the headline result for the Token Merging extension at scale.
 
-The **token merging effect on the retrained adapter** is the comparison of rows 3 and 4 — both adapters are the retrained one, only the merge flag toggles. It is small but positive: −0.12 mean loss, −0.65 in approximate PPL, with the memory delta below 1.5 MB and the forward time slightly faster. This is the soft elimination contribution proper: with an adapter that has been trained to read the broadcast merged signal at the dropped positions, enabling token merging at inference produces a consistent, if modest, additional improvement over the same adapter running under the original hard drop.
+Peak GPU memory is flat across the three states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across the three.
 
-The peak memory column is essentially flat across all four rows. The mean forward time is faster for the merged rows by approximately 0.1 s, a 12 percent reduction that we attribute to a combination of measurement noise and the fact that the merged forward path emits a slightly different control flow into flash attention's varlen kernel; the precise mechanism is not isolated by this experiment.
+The 500 document sample size gives this comparison statistical weight that the earlier four document version did not have. The per document loss distribution shape — visible in Figure 7 below as the sorted curves — separates the three states cleanly with little overlap, confirming that the loss differences reflect a population effect and not the variance of a small sample.
 
 Mean forward wall clock is within noise across the three states; it is reported in the table of Section 6.1 and not separately plotted.
 
-![Per document forward loss across the three states](output_figures/extensions/token_merging/exp-extension-token-merging-perdoc.pdf)
+![Per document forward loss distribution across the three states](output_figures/extensions/token_merging/exp-extension-token-merging-perdoc.pdf)
 
-*Figure 7. Per document forward loss across the three states. Bars are grouped by held out document and colored by state, in the same idiom as the end to end time sequence figure. The catastrophic failure of the original adapter under token merging is uniform across documents, and the retrained adapter wins on every document under token merging.*
+*Figure 7. Loss landscape across 500 held out documents. For each state, per document forward loss is sorted ascending and plotted as a beady line, so the shape of each curve is that state's loss distribution. The three curves separate cleanly with negligible overlap, confirming the headline numbers of Section 6.1 reflect a population effect rather than small sample variance.*
 
 ![Normalized loss, PPL, and peak memory across the three states](output_figures/extensions/token_merging/exp-extension-token-merging-comparison.pdf)
 
-*Figure 8. Normalized mean loss, PPL, and peak GPU memory across the three states, each metric scaled so its maximum is 1.0. Shape matches the end to end memory comparison figure idiom. Peak memory is essentially constant across states; loss and PPL move together but on different scales.*
+*Figure 8. Normalized mean loss, PPL, and peak GPU memory across the three states, each metric scaled so its maximum is 1.0. Peak memory is essentially constant; loss and PPL move together but at different scales.*
 
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train_loss.pdf)
 

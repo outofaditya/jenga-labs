@@ -1,26 +1,26 @@
 """Token merging comparison figures.
 
-Two figures are produced.
+Two figures.
 
   exp-extension-token-merging-perdoc.pdf
-    Per held out document forward loss as a beady line chart, one line
-    per state, in the visual idiom of the algorithm ablation figures
-    (src/experiment/ablation/algorithm/plot_*_attn.py). Horizontal
-    legend laid out on top of the axes outside the figure box.
+    The loss landscape: per held out document forward loss, sorted
+    ascending within each state and plotted as a beady line (markers
+    sampled every 25 documents so 500 points read clearly). The shape
+    of each curve is the loss distribution for that state.
 
   exp-extension-token-merging-comparison.pdf
-    Normalized Loss, PPL, and Peak Memory across the three states.
-    Grouped bar chart in the idiom of the end to end memory comparison
-    figure (src/experiment/end2end/memory/plot_comparison_8k.py).
-    Horizontal legend laid out on top of the axes outside the figure
-    box.
+    Normalized Loss, PPL, and Peak Memory across the three states as a
+    grouped bar chart, in the idiom of the end to end memory comparison
+    figure.
 
-All axis and legend labels are Title Case. Every save uses
-bbox_inches='tight' so no label is clipped.
+Both figures use the project palette, horizontal legend laid out on top
+of the axes outside the figure box, Title Case labels, and bbox_inches
+'tight' so labels never clip.
 """
 import argparse
 import csv
 import os
+from collections import defaultdict
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -30,11 +30,6 @@ PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
 
 STATE_KEYS = ["orig_hd", "orig_merge", "retrain_merge"]
 STATE_LABELS = ["Hard Drop", "Token Merge", "Trained Merge"]
-PER_DOC_LOSS = {
-    "orig_hd": [1.6641, 2.4219, 3.4219, 1.9141],
-    "orig_merge": [4.9375, 4.0625, 4.1875, 4.8438],
-    "retrain_merge": [1.3125, 1.7266, 1.7969, 1.5469],
-}
 
 
 def read_rows(path):
@@ -56,6 +51,13 @@ def collect_means(csv_path):
     return out
 
 
+def collect_perdoc(perdoc_csv):
+    by_state = defaultdict(list)
+    for r in read_rows(perdoc_csv):
+        by_state[r["state"]].append(float(r["loss"]))
+    return by_state
+
+
 def horizontal_top_legend(fig, ax, ncols):
     handles, labels = ax.get_legend_handles_labels()
     fig.legend(handles, labels,
@@ -66,30 +68,27 @@ def horizontal_top_legend(fig, ax, ncols):
                fontsize=11)
 
 
-def plot_perdoc(out_path):
-    """Beady line chart - the loss landscape across held out documents."""
-    n_docs = len(PER_DOC_LOSS["orig_hd"])
-    x = np.arange(1, n_docs + 1)
-
+def plot_perdoc(by_state, out_path, marker_every=25):
     fig, ax = plt.subplots(figsize=(7, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, key in enumerate(STATE_KEYS):
-        ax.plot(x, PER_DOC_LOSS[key],
+        losses = sorted(by_state[key])
+        x = np.linspace(1, len(losses), len(losses))
+        ax.plot(x, losses,
                 color="black",
                 marker="o",
-                markersize=6,
+                markersize=4,
                 markerfacecolor=PALETTE[i],
-                markeredgewidth=0.7,
-                linewidth=1.2,
+                markeredgewidth=0.5,
+                markevery=marker_every,
+                linewidth=1.0,
                 zorder=100,
                 label=STATE_LABELS[i])
-
-    ax.set_xticks(x)
-    ax.set_xticklabels([f"Doc {i}" for i in x], fontsize=12)
-    ax.tick_params(axis="y", labelsize=12)
-    ax.set_xlabel("Held Out Document", fontsize=13)
-    ax.set_ylabel("Forward Loss", fontsize=13)
-    ax.set_ylim(0, max(max(v) for v in PER_DOC_LOSS.values()) * 1.15)
+    ax.set_xlim(0, max(len(by_state[k]) for k in STATE_KEYS) + 1)
+    ax.set_xlabel("Document Rank (Sorted Ascending Per State)", fontsize=12)
+    ax.set_ylabel("Forward Loss", fontsize=12)
+    ax.tick_params(axis="both", labelsize=12)
+    ax.set_ylim(0, max(max(by_state[k]) for k in STATE_KEYS) * 1.1)
 
     horizontal_top_legend(fig, ax, ncols=3)
     plt.savefig(out_path, bbox_inches="tight")
@@ -98,7 +97,6 @@ def plot_perdoc(out_path):
 
 
 def plot_comparison(means, out_path):
-    """Grouped bar chart - normalized metric comparison across states."""
     metric_keys = ["mean_loss", "ppl_approx", "peak_memory_mb"]
     metric_labels = ["Loss", "PPL", "Peak Memory"]
     raw = {m: [float(means[s][m]) for s in STATE_KEYS] for m in metric_keys}
@@ -119,7 +117,7 @@ def plot_comparison(means, out_path):
     ax.set_xticks(x)
     ax.set_xticklabels(STATE_LABELS, fontsize=11)
     ax.tick_params(axis="y", labelsize=12)
-    ax.set_ylabel("Normalized To Max", fontsize=13)
+    ax.set_ylabel("Normalized To Max", fontsize=12)
     ax.set_ylim(0, 1.15)
 
     horizontal_top_legend(fig, ax, ncols=3)
@@ -130,15 +128,19 @@ def plot_comparison(means, out_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="logs/extensions/token_merging/comparison_heldout.csv")
+    parser.add_argument("--csv", default="logs/extensions/token_merging/comparison_500.csv")
+    parser.add_argument("--perdoc_csv", default="logs/extensions/token_merging/comparison_500_perdoc.csv")
     parser.add_argument("--out_dir", default="output_figures/extensions/token_merging")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
     means = collect_means(args.csv)
+    by_state = collect_perdoc(args.perdoc_csv)
 
-    plot_perdoc(os.path.join(args.out_dir, "exp-extension-token-merging-perdoc.pdf"))
-    plot_comparison(means, os.path.join(args.out_dir, "exp-extension-token-merging-comparison.pdf"))
+    plot_perdoc(by_state,
+                os.path.join(args.out_dir, "exp-extension-token-merging-perdoc.pdf"))
+    plot_comparison(means,
+                    os.path.join(args.out_dir, "exp-extension-token-merging-comparison.pdf"))
 
 
 if __name__ == "__main__":
