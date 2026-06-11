@@ -59,8 +59,6 @@ def main():
     config = set_RoPE(config, args.seq_len)
     pruned_cfg = torch.load(os.path.join(args.predictor_path, "pruned_config.pth"))
     config.predictor_layers = pruned_cfg["layers"]
-    config.dynamic_threshold_lambda = 0.0  # I3 isolated from I1
-    config.log_adaptive = False
     config.merge_eliminated = False
 
     tokenizer = AutoTokenizer.from_pretrained(args.base_model, model_max_length=args.seq_len, use_fast=True)

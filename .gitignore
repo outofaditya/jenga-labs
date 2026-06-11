@@ -20,3 +20,9 @@ pred
 CLAUDE.md
 .DS_Store
 **/.DS_Store
+
+# Report payload lives in ~/Downloads/bundle/jenga-report and on HuggingFace.
+# The repo ships as a reproduction template: code + scripts + docs only.
+REPORT.md
+output_figures/
+logs/

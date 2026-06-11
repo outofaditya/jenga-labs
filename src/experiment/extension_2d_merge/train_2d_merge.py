@@ -90,8 +90,6 @@ def train():
     config = set_RoPE(config, training_args.model_max_length)
     # Atom I5 hook. Enable post hoc broadcast merging in the 2D path.
     config.merge_eliminated = True
-    config.dynamic_threshold_lambda = 0.0
-    config.log_adaptive = False
     config.time = False
 
     pruned_cfg = torch.load(os.path.join(model_args.predictor_path, "pruned_config.pth"))

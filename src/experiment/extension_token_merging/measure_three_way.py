@@ -40,8 +40,6 @@ def build_model(base_model, predictor_path, peft_model, seq_len, device):
     config = set_RoPE(config, seq_len)
     pruned_cfg = torch.load(os.path.join(predictor_path, "pruned_config.pth"))
     config.predictor_layers = pruned_cfg["layers"]
-    config.dynamic_threshold_lambda = 0.0
-    config.log_adaptive = False
     config.merge_eliminated = False
 
     tokenizer = AutoTokenizer.from_pretrained(base_model, model_max_length=seq_len, use_fast=True)
