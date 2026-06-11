@@ -1,6 +1,6 @@
 from transformers.models.llama.configuration_llama import LlamaConfig
-from transformers.models.opt.configuration_opt import OPTConfig
 from transformers.models.mistral.configuration_mistral import MistralConfig
+from transformers.models.opt.configuration_opt import OPTConfig
 
 
 def get_opt_baseline(
