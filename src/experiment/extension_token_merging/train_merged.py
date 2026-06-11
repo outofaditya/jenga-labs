@@ -84,7 +84,7 @@ def train():
         thresh=training_args.thresh,
     )
     config = set_RoPE(config, training_args.model_max_length)
-    # Enable the soft elimination merge from step 0.
+    # soft elimination merge must be active from step 0 so the adapter trains against it
     config.merge_eliminated = True
     config.time = False
 

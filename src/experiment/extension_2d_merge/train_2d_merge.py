@@ -88,7 +88,7 @@ def train():
         thresh=training_args.thresh,
     )
     config = set_RoPE(config, training_args.model_max_length)
-    # Enable post hoc broadcast merging in the 2D path.
+    # post hoc broadcast keeps the LongLoRA shift path divisible by 8
     config.merge_eliminated = True
     config.time = False
 

@@ -70,9 +70,7 @@ def build_model(base_model, predictor_path, peft_model, seq_len, device):
 
 
 def load_texts(seq_len, n_docs, start_index=1000):
-    # Held out evaluation. Training drivers select range(1000); we pick
-    # documents from index 1000 onward so the retrained adapter is not
-    # measured on its own training set.
+    # held out: training drivers used range(1000) so anything past index 1000 is unseen
     ds = load_dataset("./dataset/RedPajama-Data-1T-Sample", trust_remote_code=True)[
         "train"
     ]
