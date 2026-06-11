@@ -1,43 +1,47 @@
+"""Paper Figure 16. Predictor training loss across Llama 2 7B and OPT 6.7B
+on LongAlign (LA) and RedPajama (RP). One panel, four smooth lines, legend
+inside the chart on the upper right.
+"""
 import json
+
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
-  
-loss_llama2_la = []
-loss_llama2_rd = []
-loss_opt_la = []
-loss_opt_rd = []
 
-with open('logs/ablations/predictor/llama2_16384_predictor_red/trainer_state.json', 'r') as f:
-    loss_llama2_la = [entry['loss'] for entry in json.load(f)['log_history'] if 'loss' in entry]
-with open('logs/ablations/predictor/llama2_16384_predictor_la/trainer_state.json', 'r') as f:
-    loss_llama2_rd = [entry['loss'] for entry in json.load(f)['log_history'] if 'loss' in entry]
-with open('logs/ablations/predictor/opt-6.7b_16384_predictor_red/trainer_state.json', 'r') as f:
-    loss_opt_la =[entry['loss'] for entry in json.load(f)['log_history'] if 'loss' in entry]
-with open('logs/ablations/predictor/opt-6.7b_16384_predictor_la/trainer_state.json', 'r') as f:
-    loss_opt_rd = [entry['loss'] for entry in json.load(f)['log_history'] if 'loss' in entry]
-  
-print('len of loss_llama2_la:', len(loss_llama2_la))
-print('len of loss_llama2_rd:', len(loss_llama2_rd))
-print('len of loss_opt_la:', len(loss_opt_la))
-print('len of loss_opt_rd:', len(loss_opt_rd))
 
-len_limit = 400
-loss_llama2_la = loss_llama2_la[:len_limit]
-loss_llama2_rd = loss_llama2_rd[:len_limit]
-loss_opt_la = loss_opt_la[:len_limit]
-loss_opt_rd = loss_opt_rd[:len_limit]
+def load_loss(path):
+    with open(path) as f:
+        return [entry["loss"] for entry in json.load(f)["log_history"] if "loss" in entry]
 
-plt.figure(figsize=(4, 3))
 
-colors = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
+LIMIT = 400
+SERIES = [
+    ("Llama2-LA",     "logs/ablations/predictor/llama2_16384_predictor_la/trainer_state.json",     "#255475"),
+    ("Llama2-RP",     "logs/ablations/predictor/llama2_16384_predictor_red/trainer_state.json",    "#5D7F84"),
+    ("OPT6.7B-LA",    "logs/ablations/predictor/opt-6.7b_16384_predictor_la/trainer_state.json",   "#DCBCAC"),
+    ("OPT6.7B-RP",    "logs/ablations/predictor/opt-6.7b_16384_predictor_red/trainer_state.json",  "#D6838D"),
+]
 
-plt.plot(loss_llama2_la, color=colors[0], linewidth=2)
-plt.plot(loss_llama2_rd, color=colors[1], linewidth=2)
-plt.plot(loss_opt_la, color=colors[2], linewidth=2)
-plt.plot(loss_opt_rd, color=colors[3], linewidth=2)
 
-plt.grid('y', linestyle='--', alpha=0.6)
-plt.xticks(fontsize=12)
-plt.yticks(fontsize=12)
- 
-plt.tight_layout()
-plt.savefig('output_figures/ablations/predictor/predictor-loss.pdf', bbox_inches='tight')
+def render(out_path):
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+
+    for label, path, color in SERIES:
+        losses = load_loss(path)[:LIMIT]
+        ax.plot(losses, color=color, linewidth=1.6, zorder=3)
+
+    ax.tick_params(axis="both", labelsize=12)
+
+    handles = [mpatches.Patch(facecolor=c, edgecolor="black", label=lbl)
+               for lbl, _, c in SERIES]
+    ax.legend(handles=handles, loc="upper right", frameon=False,
+              fontsize=13, handletextpad=0.6, labelspacing=0.7,
+              borderaxespad=1.0)
+
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path}")
+
+
+if __name__ == "__main__":
+    render("output_figures/ablations/predictor/predictor-loss.pdf")
