@@ -3,7 +3,7 @@
 model=${1:-"llama2"}
 max_length=${2:-8192}
 gradient_checkpointing=${3:-"False"}
-device=${4:-"a800"}  
+device=${4:-"a800"}
 
 mkdir -p logs/end2end/time
 # if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
@@ -16,7 +16,6 @@ else
     log_file="logs/end2end/time/${model}-${max_length}-${device}-baseline.log"
 fi
 
-# export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 python src/experiment/end2end/time/llama_base.py \
     --model_name_or_path "checkpoints/${model}" \
     --output_dir ./output/${model}_${max_length} \

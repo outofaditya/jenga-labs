@@ -8,5 +8,4 @@ for length in "${lengths[@]}"; do
     python src/experiment/ablation/time-breakdown/test_predictor_time.py \
         --seq_len "${length}" \
         >> "logs/ablations/time-breakdown/predictor.log"
-    # Add your processing commands here
 done

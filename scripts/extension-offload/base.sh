@@ -2,7 +2,7 @@
 
 model=${1:-"llama2"}
 max_length=${2:-16384}
-device=${3:-"a800"}  
+device=${3:-"a800"}
 
 mkdir -p logs/extension/offload
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
@@ -31,4 +31,4 @@ python src/experiment/extention/offload/base.py \
     --flash_attention True \
     --pool_size 64 \
     --thresh 0.4 \
-    > "logs/extension/offload/${model}_${max_length}-baseline.log" 
+    > "logs/extension/offload/${model}_${max_length}-baseline.log"

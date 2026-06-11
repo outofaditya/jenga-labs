@@ -3,7 +3,7 @@
 model=${1:-"opt-2.7b"}
 max_length=${2:-16384}
 gradient_checkpointing=${3:-"False"}
-device=${4:-"a800"}  
+device=${4:-"a800"}
 
 mkdir -p logs/end2end/time
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then

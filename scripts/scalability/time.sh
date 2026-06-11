@@ -37,4 +37,4 @@ deepspeed --num_gpus=${num_gpus}  src/experiment/scalability/time.py \
     --thresh ${thresh} \
     --deepspeed src/experiment/scalability/ds_config/stage2.json \
     --gradient_checkpoint True \
-    > logs/scalability/${model}_${max_length}_${num_gpus}.log 
+    > logs/scalability/${model}_${max_length}_${num_gpus}.log

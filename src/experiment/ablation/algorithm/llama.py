@@ -1,6 +1,4 @@
 import math
-
-# os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:64"
 from dataclasses import dataclass, field
 from functools import partial
 from typing import Optional

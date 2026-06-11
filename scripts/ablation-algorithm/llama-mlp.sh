@@ -2,14 +2,13 @@
 
 model=${1:-"llama2"}
 max_length=${2:-16384}
-device=${3:-"a800"}  
+device=${3:-"a800"}
 
 mkdir -p logs/ablations/algorithm
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
     export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 fi
 
-# export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 python src/experiment/ablation/algorithm/llama.py \
     --model_name_or_path "checkpoints/${model}" \
     --output_dir ./output/${model}_${max_length} \

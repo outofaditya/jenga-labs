@@ -2,7 +2,7 @@
 
 model=${1:-"llama3"}
 max_length=${2:-14336}
-device=${3:-"a800"}  
+device=${3:-"a800"}
 
 mkdir -p logs/ablations/memory-breakdown
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then

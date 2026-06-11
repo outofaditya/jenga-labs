@@ -2,13 +2,12 @@
 
 model=${1:-"llama2"}
 max_length=${2:-8192}
-device=${3:-"a800"}  
+device=${3:-"a800"}
 
 mkdir -p logs/extension/2d
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
     export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 fi
-# export PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:128
 python src/experiment/extention/2D/llama_base.py \
     --model_name_or_path "checkpoints/${model}" \
     --output_dir ./output/${model}_${max_length} \

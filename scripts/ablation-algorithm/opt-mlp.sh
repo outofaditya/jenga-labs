@@ -2,7 +2,7 @@
 
 model=${1:-"opt-6.7b"}
 max_length=${2:-16384}
-device=${3:-"a800"}  
+device=${3:-"a800"}
 
 mkdir -p logs/ablations/algorithm
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
