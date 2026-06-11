@@ -1593,9 +1593,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         else:
 
             def forward_fn_chunk(x_chunk, lm_head, label_chunk):
-                """
-                针对输入的一部分做 forward
-                """
                 logits = lm_head(x_chunk)
                 return F.cross_entropy(logits, label_chunk, reduction="sum")
 

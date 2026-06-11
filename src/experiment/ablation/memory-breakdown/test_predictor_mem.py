@@ -3,7 +3,6 @@ import argparse
 
 import torch
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--predictor_path", type=str, default="checkpoints/predictor")
@@ -11,7 +10,6 @@ if __name__ == "__main__":
 
     weight = torch.load(os.path.join(args.predictor_path, "predictor.pth"))
 
-    # 计算显存占用（单位：MB）
     total_bytes = 0
     for k, v in weight.items():
         if isinstance(v, torch.Tensor):

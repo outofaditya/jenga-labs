@@ -18,10 +18,10 @@ from jenga.utils.config_utils import get_llama_qk
 from jenga.utils.others import seed_everything, smart_tokenizer_and_embedding_resize
 
 BEGIN_TOKEN, END_TOKEN = "<<BEGIN>>", "<<END>>"
-DEFAULT_PAD_TOKEN = "[PAD]"  # 默认填充
-DEFAULT_EOS_TOKEN = "</s>"  # 句子结束
-DEFAULT_BOS_TOKEN = "<s>"  # 句子开始
-DEFAULT_UNK_TOKEN = "<unk>"  # 未知
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
 IGNORE_INDEX = -100
 
 
@@ -150,7 +150,6 @@ def train():
     train_dataset = dataset["train"]
     small_train_dataset = train_dataset.select(range(1000))
 
-    # 创建新的 DatasetDict
     small_dataset = DatasetDict({"train": small_train_dataset})
     small_dataset = small_dataset.map(
         partial(tokenize_fn, tokenizer),

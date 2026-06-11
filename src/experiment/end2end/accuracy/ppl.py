@@ -29,10 +29,10 @@ from jenga.models.modeling_llama_base import LlamaForCausalLM
 from jenga.utils.config_utils import get_llama_baseline
 
 BEGIN_TOKEN, END_TOKEN = "<<BEGIN>>", "<<END>>"
-DEFAULT_PAD_TOKEN = "[PAD]"  # 默认填充
-DEFAULT_EOS_TOKEN = "</s>"  # 句子结束
-DEFAULT_BOS_TOKEN = "<s>"  # 句子开始
-DEFAULT_UNK_TOKEN = "<unk>"  # 未知
+DEFAULT_PAD_TOKEN = "[PAD]"
+DEFAULT_EOS_TOKEN = "</s>"
+DEFAULT_BOS_TOKEN = "<s>"
+DEFAULT_UNK_TOKEN = "<unk>"
 IGNORE_INDEX = -100
 
 
@@ -46,13 +46,9 @@ def smart_tokenizer_and_embedding_resize(
     Note: This is the unoptimized version that may make your embedding size not be divisible by 64.
     """
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
-    model.resize_token_embeddings(
-        len(tokenizer)
-    )  # 调整模型嵌入层的大小以匹配tokenizer的长度
+    model.resize_token_embeddings(len(tokenizer))
 
-    # 如果有新增的符号，更新这些新符号的嵌入使之与已有的嵌入平均值一致
     if num_new_tokens > 0:
-        # 已有权重
         input_embeddings = model.get_input_embeddings().weight.data
         output_embeddings = model.get_output_embeddings().weight.data
 
@@ -62,7 +58,6 @@ def smart_tokenizer_and_embedding_resize(
         output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
             dim=0, keepdim=True
         )
-        # 增加新符号权重
         input_embeddings[-num_new_tokens:] = input_embeddings_avg
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
     return num_new_tokens

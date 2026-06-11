@@ -26,12 +26,9 @@ from transformers.trainer import (
 from transformers.training_args import TrainingArguments
 from transformers.utils import is_sagemaker_mp_enabled, is_torch_xla_available
 
-# # 总范围
 # total_range = 16384
-# # 选择的数量，70%的索引
 # num_to_select = int(total_range * 0.5)
 
-# # 从 0 到 16383 的范围内随机选择 num_to_select 个不重复的索引
 # random_indexes = random.sample(range(total_range), num_to_select)
 # random_indexes.sort()
 

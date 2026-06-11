@@ -96,7 +96,7 @@ def _make_offload_hooks(layer_idx: int):
             cpu_buf.requires_grad = t.requires_grad
             return cpu_buf
 
-        return t  # 不 offload
+        return t
 
     def unpack_hook(t: torch.Tensor):
         if t.device.type == "cpu":
@@ -123,10 +123,8 @@ def create_block_tensor(seq_len, block_size):
 
 
 def reset_offload_counters():
-    """在每个 optimizer.step() **之后** 调一次，清掉统计量。"""
+    # call once after every optimizer.step() to clear per-layer offload tallies
     for k in _activation_offload_current:
-        # print(f"layer {k} offload {_activation_offload_current[k]}")
-        # print(f"layer {k} limit {ACTIVATION_OFFLOAD_LIMITS[k]}")
         _activation_offload_current[k] = 0
 
 
@@ -1585,9 +1583,6 @@ class LlamaForCausalLM(LlamaPreTrainedModel, GenerationMixin):
         else:
 
             def forward_fn_chunk(x_chunk, lm_head, label_chunk):
-                """
-                针对输入的一部分做 forward
-                """
                 logits = lm_head(x_chunk)
                 return F.cross_entropy(logits, label_chunk, reduction="sum")
 

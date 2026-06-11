@@ -46,7 +46,6 @@ from jenga.models.predictor import PrunableAttnPredictorInfer
 if is_flash_attn_2_available():
     from transformers.modeling_flash_attention_utils import _flash_attention_forward
 
-
 logger = logging.get_logger(__name__)
 
 
@@ -56,8 +55,6 @@ def pack_hook(tensor):
         return (tensor[: seq_len // 2, :], seq_len)
 
 
-# unpack_hook: 反向时，再随便把一半元素置 0
-# 这里不需要还原前向的内容，因为我们只测性能，不关心准确性
 def unpack_hook(saved):
     # (packed, dtype) = saved
     # mask_bwd = (torch.rand_like(packed) > 0.5).float()
@@ -1200,9 +1197,6 @@ class OPTForCausalLM(OPTPreTrainedModel, GenerationMixin):
         hidden_states = outputs[0]
 
         def forward_fn_chunk(x_chunk, lm_head, label_chunk):
-            """
-            针对输入的一部分做 forward
-            """
             logits = lm_head(x_chunk)
             return nn.functional.cross_entropy(logits, label_chunk, reduction="sum")
 

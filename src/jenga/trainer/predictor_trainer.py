@@ -8,24 +8,7 @@ from jenga.models.predictor import PrunableAttnPredictor
 
 
 def extract_pruned_config(model: nn.Module, is_opt: bool = False) -> Dict[str, Any]:
-    """
-    遍历模型中的 PrunableAttnPredictor1，收集它们当前 out_features。
-    假设我们只需要存 predictor 的 outdim 信息，用于下次构造同样剪枝形状的 Predictor。
-    当然，你也可以存更多自定义字段。
-
-    返回一个 dict，比如:
-    {
-      "layers": [
-         {
-           "q1_outdim": X,
-           "q2_outdim": Y,
-           "k1_outdim": Z,
-           "k2_outdim": W
-         },
-         ...
-      ]
-    }
-    """
+    # capture per-layer predictor out_features so a saved checkpoint can rebuild the pruned shape
     cfg = {"layers": []}
     if is_opt:
         for layer in model.model.decoder.layers:
@@ -95,12 +78,6 @@ class PredictorTrainer(Trainer):
     def save_model(
         self, output_dir: Optional[str] = None, _internal_call: bool = False
     ):
-        """
-        Will save the model, so you can reload it using `from_pretrained()`.
-
-        Will only save from the main process.
-        """
-
         if output_dir is None:
             output_dir = self.args.output_dir
         os.makedirs(output_dir, exist_ok=True)
@@ -115,10 +92,7 @@ class PredictorTrainer(Trainer):
 
 
 class DynamicPruningPredictorTrainer(PredictorTrainer):
-    """
-    在 PredictorTrainer 基础上，增加每隔 prune_interval 步，对模型中
-    每个 PrunableAttnPredictor1 执行一次 prune_neurons() 的逻辑.
-    """
+    """runs prune_neurons() on every PrunableAttnPredictor every prune_interval steps."""
 
     def __init__(self, prune_interval=100, zero_ratio_threshold=0.8, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -129,7 +103,6 @@ class DynamicPruningPredictorTrainer(PredictorTrainer):
         loss_tuple = super().compute_loss(model, inputs, return_outputs=True)
         step = self.state.global_step
 
-        # 每隔 self.prune_interval 步，对 predictor 执行一次剪枝
         if step > 0 and (step % self.prune_interval == 0) and step < 620:
             times = step // self.prune_interval
             thresh = self.zero_ratio_threshold - (times - 1) * 0.05
