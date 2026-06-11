@@ -82,10 +82,9 @@ This handshake is mandatory before pod boot for every subsequent atom run.
 | R5 | Reproduction | 2.0 | 2.00 | done (6 of 6 trimmed scope; Jenga 2 to 5 percent higher PPL than LoRA at 4x memory) |
 | R6 | Reproduction | 0.2 | 0.20 | done on RTX 4090 pod 2 v2 (Llama 2 7B + OPT 6.7B attn and mlp ablations) |
 | R7 | Reproduction (optional gated) | 3.0 | 3.00 | gated |
-| I1 | Improvement | 3.0 | 3.00 | done (mechanism verified; downstream PPL not measurable with the artifact's dense PPL tool; demoted to "other approaches" paragraph) |
-| I2 | Improvement | 2.0 | 2.00 | done (negative result: CNN 15x worse than MLP on OPT 1.3B; demoted to "other approaches" paragraph) |
 | I3 | Improvement | 0.5 | 0.50 | done (positive: 0.4 percent lower loss at near zero memory overhead, naive inference only) |
-| I4 | Improvement | 0.7 | 0.70 | in progress (joint train LoRA with merge_eliminated true then re-evaluate) |
+| I4 | Improvement | 0.7 | 0.70 | done (joint train LoRA with merge_eliminated; 28 percent loss reduction at 500 docs) |
+| I5 | Improvement | 2.0 | 2.00 | done (negative: 2D sparsity + Token Merging composition regresses) |
 | P1 | Reporting | 0 | 0 | pending |
 | P2 | Reporting | 0 | 0 | pending |
 | Buffer | reserve | 3.8 | 3.80 | reserve |
@@ -457,69 +456,6 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 # Category: Improvement
 
-### Atom I1: Extension A Dynamic Adaptive Thresholds
-
-**Purpose.** Implement and evaluate a runtime entropy heuristic that overrides the static `config.thresh` per batch. Produce one scatter figure of predictor entropy versus token retention ratio and one bar chart of perplexity across swept lambda values, both compared against an equal budget retrained Jenga baseline.
-
-**Depends On.** R5. (R6 and R7 are not prerequisites.)
-
-**Inputs.** `src/jenga/models/modeling_llama.py` and `src/jenga/ops/get_meta.py` where the static threshold is applied. Llama 2 7B at sequence length 8192. `lam in {0.05, 0.1, 0.2}`. Three seeds per setting.
-
-**Steps.**
-
-1. Implement `CNNAttnPredictor`-class plumbing only for thresholds: extend `modeling_llama.py` to accept a `dynamic_threshold_lambda` config field. Plumb it through to the call site where the threshold is consumed.
-2. In the forward pass after the predictor scores are computed, compute the normalized Shannon entropy of the positive informativeness scores per layer per batch.
-3. Compute `t_dynamic = t_base + lam * (1 - entropy_norm)` and use it in place of the static threshold.
-4. Add a CLI argument `--dynamic_threshold_lambda` to `src/experiment/end2end/time/llama_jenga.py` and surface it via a new shell wrapper `scripts/extension-adaptive/run.sh <lam>`.
-5. Retrain a Jenga baseline (static threshold) under exactly the same training budget that the adaptive runs will use. This is the fair comparison baseline.
-6. For each `lam in {0.05, 0.1, 0.2}` and each seed in `{0, 1, 2}` run the adaptive driver until the training budget cap is hit. Log retention ratio per layer per batch and final PPL on `proof_pile.bin` and `test_pg19.bin`.
-7. Plot the entropy versus retention scatter and the PPL bar chart.
-
-**Outputs.**
-
-* `logs/extensions/adaptive_thresholds/retention.json` with schema `{"lam": <float>, "seed": <int>, "batch_idx": <int>, "layer_idx": <int>, "entropy": <float>, "retention_ratio": <float>}`.
-* `logs/extensions/adaptive_thresholds/ppl.json` with schema `{"method": "jenga_adaptive", "lam": <float>, "seed": <int>, "ppl_proof_pile": <float>, "ppl_pg": <float>}` and matching rows for the equal budget static baseline.
-* `output_figures/improvement/adaptive_thresholds/scatter.pdf` and `output_figures/improvement/adaptive_thresholds/ppl_bar.pdf`.
-
-**Success Criteria.**
-
-* Adaptive driver completes for all three `lam` values across three seeds without NaN loss.
-* The scatter plot is generated and exhibits a non flat relationship (either positive or negative correlation; flat means the heuristic does not respond to input).
-* The PPL bar chart includes the equal budget retrained static baseline so the comparison is fair.
-
-**Report Update.** Section 5.1 gains the implementation description and the formula. Section 6.1 gains the two PDFs and a paragraph on whether the entropy heuristic produced any directional improvement and on the observed sensitivity to `lam`. Budget ledger updated.
-
-**Budget.** Three hours covering one static baseline retrain plus three lambda settings times three seeds at reduced step count. Estimate 3 hours.
-
-### Atom I2: Extension B 1D CNN Predictor
-
-**Purpose.** Implement a 1D convolutional alternative to the per block MLP predictor and compare offline training convergence (mean squared error against the dense attention ground truth) at equal epoch budget. Produce one dual line plot of MSE versus epoch.
-
-**Depends On.** I1.
-
-**Inputs.** `src/jenga/models/predictor.py`. The offline predictor training harness under `src/experiment/ablation/predictor/`. RedPajama subset.
-
-**Steps (as built).**
-
-1. `CNNAttnPredictor` added to `src/jenga/models/predictor.py`. Two `nn.Conv1d` layers (`kernel_size=3`, `padding=1`), ReLU between them, final linear projection. Convolutional axis is the block index.
-2. Self contained driver `src/experiment/extension_cnn_predictor/train_both.py` written instead of reusing the heavy HF Trainer harness. Driver caches `(hidden_state, pooled_attention_score)` per layer from a frozen base model, then trains MLP and CNN predictors on the cache with three seeds each.
-3. **Base model deviation: OPT-1.3B at sequence length 2048** instead of Llama 2 7B. Reason: Llama 2 7B with `output_attentions=True` materialises ~32 GB of per-layer attention tensors and OOMs even on a 48 GB GPU. The Jenga predictor is model agnostic; the head to head MSE comparison is preserved.
-4. Plot a dual line chart of epoch versus MSE loss.
-
-**Outputs.**
-
-* `logs/extensions/cnn_predictor/loss.csv` columns `epoch,seed,predictor_type,train_loss`.
-* `output_figures/improvement/cnn_predictor/loss_curve.pdf`.
-
-**Success Criteria.**
-
-* Both predictor variants complete training without NaN.
-* The plot includes mean curves and error bands across seeds.
-
-**Report Update.** Section 5.2 gains the implementation description. Section 6.2 gains the loss curve PDF and a paragraph on convergence speed and final asymptotic MSE comparison.
-
-**Budget.** Two hours. Estimate 2 hours.
-
 ### Atom I3: Token Merging at Inference Only
 
 **Purpose.** Test whether replacing Jenga's hard elimination with a single mean pooled summary token per sparse layer improves forward loss at inference time on the authors' existing Jenga LoRA adapter.
@@ -534,12 +470,12 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 2. When the flag is True at layers index 15 onward, compute the dropped block indices, gather the dropped token hidden states from the pre drop layer input, mean pool to a single hidden dimensional vector, and append it to the kept sequence at the position of the last kept token.
 3. Reconstruct the layer output by scattering the kept tokens back to their original positions and broadcasting the merged token's attention output onto every dropped position so the residual stream carries a non zero representation across the dropped portion of the sequence.
 4. Build `src/experiment/extension_token_merging/measure_merge.py` to load the same model twice with the flag toggled and measure mean loss, peak memory, and mean forward time on the same four documents.
-5. Plot the result as a three column bar chart placed in `output_figures/improvement/token_merging/`.
+5. Plot the result as a three column bar chart placed in `output_figures/improvement/`.
 
 **Outputs.**
 
 * `logs/extensions/token_merging/comparison.csv` columns `mode,n_docs,mean_loss,ppl_approx,peak_memory_mb,mean_forward_s`.
-* `output_figures/improvement/token_merging/bar.pdf`.
+* `output_figures/improvement/bar.pdf`.
 
 **Success Criteria.**
 
@@ -569,7 +505,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 * `checkpoints/peft_model_merged/` directory with the trained LoRA weights and tokenizer state.
 * The third row of `logs/extensions/token_merging/comparison.csv` populated.
-* Updated `output_figures/improvement/token_merging/bar.pdf` with the third configuration.
+* Updated `output_figures/improvement/bar.pdf` with the third configuration.
 
 **Success Criteria.**
 
