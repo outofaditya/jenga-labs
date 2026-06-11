@@ -1,4 +1,4 @@
-"""Atom I5 evaluation harness.
+"""Evaluation harness for the 2D sparsity adapter.
 
 Loads the 2D sparsity model (Jenga token sparsity + LongLoRA shifted
 attention) with the retrained I5 LoRA adapter and measures forward loss

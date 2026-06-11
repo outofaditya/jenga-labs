@@ -1,5 +1,5 @@
 #!/bin/bash
-# Atom I4: train a LoRA adapter from step 0 with Token Merging enabled
+# train a LoRA adapter from step 0 with Token Merging enabled
 # (config.merge_eliminated=True). Llama 2 7B, 8K context, RedPajama,
 # 500 steps, bf16, batch size 1, gradient checkpoint on.
 set -e

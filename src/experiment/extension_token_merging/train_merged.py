@@ -1,5 +1,5 @@
 """
-Atom I4 driver. Fine tune the LoRA adapter on top of Llama 2 7B with
+Token Merging training driver. Fine tune the LoRA adapter on top of Llama 2 7B with
 merge_eliminated enabled from step 0 so the merged token participates in
 training. Mirrors the end to end time experiment driver but writes the
 adapter to checkpoints/peft_model_merged so the existing baseline adapter
@@ -84,7 +84,7 @@ def train():
         thresh=training_args.thresh,
     )
     config = set_RoPE(config, training_args.model_max_length)
-    # Atom I4 hook. Enable the soft elimination merge from step 0.
+    # Enable the soft elimination merge from step 0.
     config.merge_eliminated = True
     config.time = False
 

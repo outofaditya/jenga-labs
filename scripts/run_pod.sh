@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Unattended Atom S1 bootstrap for a fresh Vast.ai or RunPod A100 80GB pod.
+# Unattended bootstrap for a fresh Vast.ai or RunPod A100 80GB pod.
 #
 # Required env vars:
 #   HF_TOKEN         A Hugging Face read scoped token. Must have access to any gated
@@ -221,7 +221,7 @@ if [ "$INCLUDE_OPT_6_7B" = "1" ]; then
   pull_base_model "facebook/opt-6.7b"            "checkpoints/opt-6.7b"
 fi
 
-log "Sanity checks (Atom S1 success criteria)"
+log "Sanity checks"
 python -c "import torch; assert torch.cuda.is_available(), 'CUDA not visible'; print('cuda ok', torch.cuda.get_device_name(0))"
 python -c "import flash_attn, jenga; print('flash_attn ok', flash_attn.__version__); print('jenga ok')"
 
@@ -249,4 +249,4 @@ if [ "$missing" -gt 0 ]; then
   exit 1
 fi
 
-log "Atom S1 bootstrap complete. Next: bash hello-world.sh (Atom S2)."
+log "Bootstrap complete. Next: bash hello-world.sh"

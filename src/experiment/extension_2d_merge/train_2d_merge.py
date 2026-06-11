@@ -1,4 +1,4 @@
-"""Atom I5 driver. Train a LoRA adapter against the 2D sparsity model
+"""2D sparsity training driver. Train a LoRA adapter against the 2D sparsity model
 (Jenga token sparsity composed with LongLoRA shifted attention) with the
 post hoc broadcast merging variant enabled from step 0.
 
@@ -88,7 +88,7 @@ def train():
         thresh=training_args.thresh,
     )
     config = set_RoPE(config, training_args.model_max_length)
-    # Atom I5 hook. Enable post hoc broadcast merging in the 2D path.
+    # Enable post hoc broadcast merging in the 2D path.
     config.merge_eliminated = True
     config.time = False
 
