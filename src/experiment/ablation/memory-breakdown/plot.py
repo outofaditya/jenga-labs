@@ -1,123 +1,114 @@
-import matplotlib.pyplot as plt
+"""Paper Figure 14 (a). Memory footprint stacked horizontal bars for
+Llama 2 7B at 8 K (LoRA, LongLoRA, Jenga) and at 10 K to 16 K under
+Jenga. Categories: model state, activation, others, predictor.
+"""
 import os
 import re
 
-# data = [
-#     {"case": "8K LoRA",     "total_mem": 0.0, "model_states": 0, "activations": 0, "others": 0, "predictors": 0},
-# ]
-def read_from_log():
-    log_dir = "logs/ablations/memory-breakdown"
-    log_files = [
-        "llama2-8192-a800-baseline.log",
-        "llama2-8192-a800-llora.log",
-        "llama2-8192-a800.log",
-        "llama2-10240-a800.log",
-        "llama2-12288-a800.log",
-        "llama2-14336-a800.log",
-        "llama2-16384-a800.log",
-    ]
+import matplotlib.pyplot as plt
 
-    data = []
 
-    # 解析 predictor.log
-    predictor_path = os.path.join(log_dir, "predictor.log")
-    predictor_memories = 0.0
+LOG_DIR = "logs/ablations/memory-breakdown"
+LOG_FILES = [
+    "llama2-8192-a800-baseline.log",
+    "llama2-8192-a800-llora.log",
+    "llama2-8192-a800.log",
+    "llama2-10240-a800.log",
+    "llama2-12288-a800.log",
+    "llama2-14336-a800.log",
+    "llama2-16384-a800.log",
+]
+PALETTE = ["#255475", "#5D7F84", "#DCBCAC", "#D6838D"]
+STAGES = ["model state", "activation", "others", "predictor"]
+KEYS = ["model_states", "activations", "others", "predictors"]
+
+
+def read_logs():
+    predictor_path = os.path.join(LOG_DIR, "predictor.log")
+    predictor_mem = 0.0
     if os.path.exists(predictor_path):
-        with open(predictor_path, "r") as f:
+        with open(predictor_path) as f:
             for line in f:
-                match = re.search(r"Total memory:\s*([\d.]+)\s*MB", line)
-                if match:
-                    memory = float(match.group(1))
-                    predictor_memories = memory
+                m = re.search(r"Total memory:\s*([\d.]+)\s*MB", line)
+                if m:
+                    predictor_mem = float(m.group(1))
 
-    for filename in log_files:
-        path = os.path.join(log_dir, filename)
+    rows = []
+    for filename in LOG_FILES:
+        path = os.path.join(LOG_DIR, filename)
         if not os.path.exists(path):
             continue
-
-        with open(path, "r") as f:
+        with open(path) as f:
             lines = [line.strip() for line in f if "allocaiton" in line]
-
         if len(lines) < 2:
             continue
-
-        # 提取 second allocation (index 1)
-        second_alloc = re.search(r"allocaiton:\s*([0-9.]+)", lines[1])
-        second_alloc_val = float(second_alloc.group(1)) if second_alloc else 0.0
-
-        # 最后一行的信息
-        last_line = lines[-1]
-        last_alloc = re.search(r"allocaiton:\s*([0-9.]+)", last_line)
-        reserve = re.search(r"reserve:\s*([0-9.]+)", last_line)
-
-        if not last_alloc or not reserve:
+        second = re.search(r"allocaiton:\s*([0-9.]+)", lines[1])
+        last_alloc = re.search(r"allocaiton:\s*([0-9.]+)", lines[-1])
+        reserve = re.search(r"reserve:\s*([0-9.]+)", lines[-1])
+        if not (second and last_alloc and reserve):
             continue
-
         model_states = float(last_alloc.group(1))
-        total_mem = float(reserve.group(1))
-        activations = second_alloc_val - model_states
-        others = total_mem - second_alloc_val
-
-        # 判断 case 名
-        base_name = filename.replace(".log", "")
-        parts = base_name.split("-")
-        size = int(parts[1]) // 1024  # 转换成 K
+        total = float(reserve.group(1))
+        activations = float(second.group(1)) - model_states
+        others = total - float(second.group(1))
+        size_k = int(filename.split("-")[1]) // 1024
         if "baseline" in filename:
             tag = "LoRA"
         elif "llora" in filename:
             tag = "LongLoRA"
         else:
             tag = "Jenga"
-        case = f"{size}K {tag}"
-
-        # 获取 predictor memory（只对 Jenga 有效）
-        predictor_mem = predictor_memories if tag == "Jenga" else 0.0
-
-        data.append({
-            "case": case,
-            "total_mem": round(total_mem, 2),
-            "model_states": round(model_states, 2),
-            "activations": round(activations, 2),
-            "others": round(others, 2),
-            "predictors": round(predictor_mem, 2)
+        rows.append({
+            "case": f"{size_k}K {tag}",
+            "model_states": model_states / 1024,
+            "activations": activations / 1024,
+            "others": others / 1024,
+            "predictors": (predictor_mem / 1024) if tag == "Jenga" else 0.0,
         })
-
-    print(data)
-    return data
-data = read_from_log()
+    return rows
 
 
-for d in data:
-    d['model_states'] /= 1024
-    d['activations'] /= 1024
-    d['others'] /= 1024
-    d['predictors'] /= 1024
-    d['total_mem'] = d['model_states'] + d['activations'] + d['others'] + d['predictors']
-data = data[::-1]
+def render(out_path):
+    rows = read_logs()
+    rows = rows[::-1]
+    cases = [r["case"] for r in rows]
+    n = len(rows)
 
-cases = [d['case'] for d in data]
-colors = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
-stages = ['model_states', 'activations', 'others', 'predictors']
-stage_colors = {stage: colors[i] for i, stage in enumerate(stages)}
+    fig, ax = plt.subplots(figsize=(9, 3.6))
+    ax.grid(axis="x", linestyle="--", alpha=0.6, zorder=0)
 
-fig, ax = plt.subplots(figsize=(8, 3))
+    bar_height = 0.6
+    y_pos = list(range(n))
+    for i, r in enumerate(rows):
+        left = 0
+        for j, key in enumerate(KEYS):
+            width = r[key]
+            ax.barh(y_pos[i], width, left=left, color=PALETTE[j],
+                    edgecolor="black", height=bar_height, zorder=3,
+                    label=STAGES[j] if i == 0 else None)
+            left += width
 
-bar_height = 0.1
-bar_y_based = 0.5
-bar_y_gap = 0.1
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(cases, fontsize=13)
+    ax.tick_params(axis="x", labelsize=13)
+    ax.set_xlabel("Memory Footprint (GB)", fontsize=13)
+    totals = [r["model_states"] + r["activations"] + r["others"] + r["predictors"] for r in rows]
+    ax.set_xlim(0, max(totals) * 1.05)
 
-for i, d in enumerate(data):  
-    left = 0
-    y_pos = i * (bar_height + bar_y_gap) + bar_y_based
-    for stage in stages:  
-        ax.barh(y_pos, d[stage], left=left, label=stage if i == 0 else "", color=stage_colors[stage], height=bar_height, edgecolor='black')
-        left += d[stage]
-   
-ax.set_xlabel('Memory Footprint (GB)', fontsize=14)
-ax.set_yticks([i * (bar_height + bar_y_gap) + bar_y_based for i in range(len(data))])
-ax.set_yticklabels(cases, fontsize=14)
-ax.tick_params(axis='x', labelsize=14)
-ax.set_xlim(0, 1.2 * max([d['total_mem'] for d in data]))
+    header_y = 1.04
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels, loc="lower right",
+              bbox_to_anchor=(1.0, header_y), ncol=4, frameon=False,
+              fontsize=12, handletextpad=0.4, columnspacing=1.0,
+              borderpad=0.0, borderaxespad=0.0)
+    ax.text(-0.13, header_y, "(a) Memory Footprint",
+            transform=ax.transAxes, ha="left", va="bottom",
+            fontsize=13, fontweight="bold")
 
-plt.tight_layout()
-plt.savefig('output_figures/ablations/memory-breakdown/memory-breakdown.pdf', bbox_inches='tight')
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path}")
+
+
+if __name__ == "__main__":
+    render("output_figures/ablations/memory-breakdown/memory-breakdown.pdf")
