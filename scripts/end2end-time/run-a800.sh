@@ -1,7 +1,6 @@
 #!/bin/bash
 
 # --------------------------
-# 运行 8192 上的全部模型组合
 # --------------------------
 models_llama=("llama2" "llama3")
 methods_llama=("base" "llora" "jenga")
@@ -22,11 +21,10 @@ for model in "${models_opt[@]}"; do
 done
 
 # --------------------------
-# LLaMA 不同 seq_len 实验
 # --------------------------
 seq_lens=(4096 8192 16384 32768 49152 65536)
 models_seq=("llama2" "llama3")
-methods_seq=("base" "jenga")  # 只有 base 和 jenga
+methods_seq=("base" "jenga")
 
 for model in "${models_seq[@]}"; do
   for seq_len in "${seq_lens[@]}"; do
@@ -37,7 +35,6 @@ for model in "${models_seq[@]}"; do
 done
 
 # --------------------------
-# 画图
 # --------------------------
 mkdir -p output_figures/end2end/time
 python src/experiment/end2end/time/plot_comparison_a800.py

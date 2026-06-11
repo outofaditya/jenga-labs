@@ -4,7 +4,6 @@ device="a40"
 seq_len=4096
 
 # --------------------------
-# LLaMA 模型（llama2 / llama3）
 # --------------------------
 # models_llama=("llama2" "llama3")
 # methods_llama=("base" "llora" "jenga")
@@ -20,7 +19,6 @@ seq_len=4096
 # done
 
 # --------------------------
-# OPT 模型
 # --------------------------
 models_opt=("opt-6.7b" "opt-2.7b" "opt-1.3b" "opt-350m")
 methods_opt=("base" "llora" "jenga")
@@ -32,7 +30,6 @@ for model in "${models_opt[@]}"; do
 done
 
 # --------------------------
-# 画图
 # --------------------------
 mkdir -p output_figures/end2end/time
 python src/experiment/end2end/time/plot_comparison_a40.py

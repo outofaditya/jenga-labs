@@ -1,15 +1,13 @@
 #!/bin/bash
 
-# 允许从外部传入参数，否则使用默认值
-model=${1:-"llama2"}  # 默认值为 opt-2.7b
-max_length=${2:-16384}  # 默认值为 16384
+model=${1:-"llama2"}
+max_length=${2:-16384}
 device=${3:-"a800"}  
 
 mkdir -p logs/extension/offload
 if [[ "${PYTORCH_CUDA_ALLOC_CONF}" != *"expandable_segments:True"* ]]; then
     export PYTORCH_CUDA_ALLOC_CONF="expandable_segments:True"
 fi
-
 
 python src/experiment/extention/offload/base.py \
     --model_name_or_path "checkpoints/${model}" \

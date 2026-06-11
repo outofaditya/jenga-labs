@@ -1,8 +1,7 @@
 #!/bin/bash
 
-# 允许从外部传入参数，否则使用默认值
-model=${1:-"llama2"}  # 默认值为 opt-2.7b
-max_length=${2:-8192}  # 默认值为 16384
+model=${1:-"llama2"}
+max_length=${2:-8192}
 device=${3:-"a800"}  
 
 mkdir -p logs/ablations/memory-breakdown
