@@ -6,11 +6,20 @@ import torch
 from accelerate import __version__ as accelerate_version
 from packaging import version
 from torch.utils.data import Dataset, SequentialSampler
-from transformers import Trainer
+from transformers import (
+    DataCollator,
+    EvalPrediction,
+    PreTrainedModel,
+    PreTrainedTokenizerBase,
+    Trainer,
+    TrainerCallback,
+)
+from transformers.models.auto.modeling_auto import MODEL_FOR_CAUSAL_LM_MAPPING_NAMES
 from transformers.trainer import (
     IS_SAGEMAKER_MP_POST_1_10,
     SAFE_WEIGHTS_NAME,
     WEIGHTS_NAME,
+    _is_peft_model,
     logger,
     remove_dummy_checkpoint,
 )

@@ -10,7 +10,7 @@ import torch
 import transformers
 from datasets import DatasetDict, load_dataset
 from peft import LoraConfig, get_peft_model
-from transformers import AutoTokenizer, DataCollatorForLanguageModeling, Trainer
+from transformers import AutoTokenizer, DataCollatorForLanguageModeling
 
 from jenga.models.modeling_llama import LlamaForCausalLM
 from jenga.trainer.time_profile import Trainer

@@ -13,7 +13,7 @@ import transformers
 from datasets import load_dataset
 from peft import PeftModel
 from tqdm import tqdm
-from transformers import AutoTokenizer, LlamaForCausalLM
+from transformers import AutoTokenizer
 
 from jenga.models.modeling_llama_base import LlamaForCausalLM
 from jenga.utils.config_utils import get_llama_baseline

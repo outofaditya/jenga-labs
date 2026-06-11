@@ -1,6 +1,7 @@
-import argparse
-import torch
 import os
+import argparse
+
+import torch
 
 
 if __name__ == "__main__":

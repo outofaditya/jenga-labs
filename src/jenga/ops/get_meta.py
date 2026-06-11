@@ -301,9 +301,7 @@ class PrunedLlamaMLPFunction(torch.autograd.Function):
             down_w,
         ) = ctx.saved_tensors
 
-        prune_ratio = ctx.prune_ratio
-        B, S, H, I = ctx.B, ctx.S, ctx.H, ctx.I
-        keep_num = int(I * (1 - prune_ratio))
+        B, S, I = ctx.B, ctx.S, ctx.I
 
         # --------------------------------------------------
         # 反向传播各步 (带维度注释)

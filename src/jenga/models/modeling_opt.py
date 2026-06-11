@@ -516,7 +516,6 @@ class OPTDecoderLayer(nn.Module):
         """
 
         residual = hidden_states
-        seq_len = hidden_states.shape[1]
         # 125m, 1.7B, ..., 175B applies layer norm BEFORE attention
         if self.do_layer_norm_before:
             hidden_states = self.self_attn_layer_norm(hidden_states)

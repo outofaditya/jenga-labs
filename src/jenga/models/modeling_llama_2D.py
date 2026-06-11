@@ -800,7 +800,6 @@ class LlamaFlashAttention2(LlamaAttention):
             return qkv
 
         group_size = int(ql * 0.125)
-        num_group = ql // group_size
         query_states = shift(
             query_states, bsz, ql, group_size, self.num_heads, self.head_dim
         )

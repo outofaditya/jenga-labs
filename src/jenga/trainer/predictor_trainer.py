@@ -68,7 +68,6 @@ class PredictorTrainer(Trainer):
         self.is_opt = is_opt
 
     def compute_loss(self, model, inputs, return_outputs=False):
-        step = self.state.global_step
         outputs = model(**inputs)
 
         predict_mask = outputs.get("predict_mask")
