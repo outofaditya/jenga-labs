@@ -1,22 +1,21 @@
-import matplotlib.pyplot as plt
-import os 
+"""Paper Figure 12 reproduction. Six models at 4 K context, normalized to LongLoRA."""
+import os
 import re
+
+import matplotlib.pyplot as plt
+
 
 def parse_memory_logs(log_dir):
     data = []
-
     for filename in os.listdir(log_dir):
         if not filename.endswith(".log"):
             continue
-
         filepath = os.path.join(log_dir, filename)
         try:
             with open(filepath, "r") as f:
                 lines = [line.strip() for line in f if "reserve" in line]
-        except Exception as e:
-            continue  # Skip unreadable files
-
-        # Determine case name
+        except Exception:
+            continue
         base = filename.replace(".log", "")
         if "baseline" in base:
             case_type = "lora"
@@ -26,99 +25,86 @@ def parse_memory_logs(log_dir):
             base = base.replace("llora", "")
         else:
             case_type = "jenga"
-        
-        # Extract context length and model
         parts = base.split("-")
         if "opt" not in filename:
             model = parts[0]
-            context = parts[1]  # remove the trailing K if present
+            context = parts[1]
         else:
-            model = parts[0]
-            size = parts[1]
-            model = model+size
+            model = parts[0] + parts[1]
             context = parts[2]
         context = int(context) // 1024
         case_name = f"{model}-{case_type}-{context}K"
-
-        # Check if OOM
         if len(lines) < 10:
             memory = 0
         else:
-            # Extract last 'reserve' value
             match = re.search(r"reserve:\s*([\d.]+)", lines[-1])
             memory = float(match.group(1)) if match else 0
-
         data.append({"case": case_name, "memory": memory})
-    print(data)
     return data
 
 
-# data = [
-#     {"case": "llama2-lora-4K", "memory": 0},
-# ]
+PALETTE = ["#255475", "#5D7F84", "#DCBCAC"]
+MODELS = ["llama3", "llama2", "opt6.7b", "opt2.7b", "opt1.3b", "opt350m"]
+METHODS = ["lora", "longlora", "jenga"]
+METHOD_LABELS = ["LoRA", "LongLoRA", "Jenga"]
 
-data = parse_memory_logs("logs/end2end/memory")
 
-data_4k = [d for d in data if "4K" in d["case"]]
+def render(seq_label_k, out_path):
+    data = parse_memory_logs("logs/end2end/memory")
+    data_seq = [d for d in data if f"-{seq_label_k}K" in d["case"]]
 
-colors = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
-models = ["llama3", "llama2", "opt6.7b", "opt2.7b", "opt1.3b", "opt350m"]
-methods = ["lora", "longlora", "jenga"]
+    abs_memory = {m: [] for m in METHODS}
+    for model in MODELS:
+        for method in METHODS:
+            case = f"{model}-{method}-{seq_label_k}K"
+            mem = next((d["memory"] for d in data_seq if d["case"] == case), 0)
+            abs_memory[method].append(mem)
 
-x_labels = []
-memory_values = {method: [] for method in methods}
-savings_labels = []
+    norm = {m: [] for m in METHODS}
+    savings = []
+    for i in range(len(MODELS)):
+        ref = max(abs_memory["lora"][i], abs_memory["longlora"][i], 1.0)
+        for m in METHODS:
+            norm[m].append(abs_memory[m][i] / ref)
+        jenga = abs_memory["jenga"][i]
+        longlora = abs_memory["longlora"][i]
+        savings.append(longlora / jenga if jenga > 0 and longlora > 0 else None)
 
-for model in models:
-    x_labels.append(model)
-    jenga_memory = 0
-    longlora_memory = 0
-    for method in methods:
-        case = f"{model}-{method}-4K"
-        memory = next((d["memory"] / 1000 for d in data_4k if d["case"] == case), 0)
-        memory_values[method].append(memory)
-        if method == "jenga":
-            jenga_memory = memory
-        if method == "longlora":
-            longlora_memory = memory
-    if longlora_memory > 0:
-        savings = longlora_memory / jenga_memory
-        savings_labels.append(f"{savings:.2f}x")
-    else:
-        savings_labels.append("N/A")
+    bar_width = 0.25
+    x = list(range(len(MODELS)))
 
-print(savings_labels)
+    fig, ax = plt.subplots(figsize=(9, 2.8))
+    ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+    for i, method in enumerate(METHODS):
+        ax.bar([p + i * bar_width for p in x], norm[method], bar_width,
+               label=METHOD_LABELS[i], color=PALETTE[i], edgecolor="black", zorder=3)
 
-for i in range(len(models)):
-    for method in methods:
-        if method != "longlora":
-            memory_values[method][i] /= memory_values["longlora"][i]
-    memory_values["longlora"][i] = 1
+    for i, s in enumerate(savings):
+        if s is None:
+            continue
+        xpos = x[i] + 2 * bar_width
+        ax.text(xpos, 0.05, f"{s:.2f}x", ha="center", va="bottom",
+                fontsize=13, rotation=90, color="#222")
 
-bar_width = 0.25
-x = range(len(models))
+    ax.set_xticks([p + bar_width for p in x])
+    ax.set_xticklabels(MODELS, fontsize=13)
+    ax.set_yticks([0.0, 0.25, 0.5, 0.75, 1.0])
+    ax.tick_params(axis="y", labelsize=13)
+    ax.set_ylim(0, 1.08)
+    ax.set_ylabel("Memory Footprint (Normalized)", fontsize=13)
 
-plt.figure(figsize=(8, 2))
-for i, method in enumerate(methods):
-    plt.bar(
-        [pos + i * bar_width for pos in x],
-        memory_values[method],
-        bar_width,
-        label=method.capitalize(),
-        color=colors[i % len(colors)],
-        edgecolor="black",
-        zorder=3,
-    )
+    header_y = 1.06
+    ax.legend(loc="lower left", bbox_to_anchor=(0.0, header_y),
+              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
+              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
+    ax.text(1.0, header_y, f"Sequence Length = {seq_label_k}K",
+            transform=ax.transAxes, ha="right", va="bottom",
+            fontsize=13, fontweight="bold")
 
-# for i, label in enumerate(savings_labels):
-#     jenga_x_pos = x[i] + 2 * bar_width
-#     jenga_y_pos = memory_values["jenga"][i]
-#     plt.text(jenga_x_pos, jenga_y_pos + 100, label, ha="center", va="bottom", fontsize=10)
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path}")
 
-plt.grid(axis="y", linestyle="--", alpha=0.6)
-plt.yticks(fontsize=14)
-plt.xticks([pos + bar_width for pos in x], x_labels, fontsize=14)
-# plt.ylabel("Memory Footprint (GB)", fontsize=14)
-plt.tight_layout()
-plt.savefig("output_figures/end2end/memory/memory-4k.pdf")
-plt.close()
+
+if __name__ == "__main__":
+    render(4, "output_figures/end2end/memory/memory-4k.pdf")

@@ -1,109 +1,117 @@
-import matplotlib.pyplot as plt
-import numpy as np
+"""Paper Figure 13 bottom panel. Step time across sequence lengths for
+Llama 2 and Llama 3, four bars per sequence: LoRA-Llama2, Jenga-Llama2,
+LoRA-Llama3, Jenga-Llama3. Normalized per sequence to the maximum of
+the four. OOM bars are rendered as red 'OOM' text.
+"""
 import os
 import re
 
-# data_llama2 = {
-#     "Seq": ["4k", "8k", "16k", "32k", "48k", "64k"],
-#     "lora": [1241.929, 2666.448, 6047.240, 15439.142, 28292.347, 44677.158],
-#     "ours": [1149.568, 2390.249, 5202.09, 12336.110, 21521.058, 32813.567],
-# }
-# data_llama3 = {
-#     "Seq": ["4k", "8k", "16k", "32k", "48k", "64k"],
-#     "lora": [1310.354, 2788.882, 6327.096, 15967.367, 0.0, 0.0],
-#     "ours": [1253.038, 2593.830, 5572.286, 13049.171, 22555.839, 34640.386],
-# }
+import matplotlib.pyplot as plt
+import numpy as np
 
-def parse_llama_logs(log_dir):
-    data_llama2 = {"Seq": ["4k", "8k", "16k", "32k", "48k", "64k"], "lora": [], "ours": []}
-    data_llama3 = {"Seq": ["4k", "8k", "16k", "32k", "48k", "64k"], "lora": [], "ours": []}
-    seq_map = {"4096": "4k", "8192": "8k", "16384": "16k", "32768": "32k", "49152": "48k", "65536": "64k"}
 
+SEQ_MAP = {"4096": "4k", "8192": "8k", "16384": "16k",
+           "32768": "32k", "49152": "48k", "65536": "64k"}
+SEQ_ORDER = ["4k", "8k", "16k", "32k", "48k", "64k"]
+PALETTE = ["#255475", "#5D7F84", "#DCBCAC", "#D6838D"]
+SERIES = ["lora_llama2", "jenga_llama2", "lora_llama3", "jenga_llama3"]
+SERIES_LABELS = ["LoRA-Llama2", "Jenga-Llama2", "LoRA-Llama3", "Jenga-Llama3"]
+
+
+def parse_logs(log_dir):
+    data = {model: {method: {s: 0.0 for s in SEQ_ORDER} for method in ["lora", "jenga"]}
+            for model in ["llama2", "llama3"]}
     for filename in os.listdir(log_dir):
-        if not filename.startswith("checkpoint-") or not filename.endswith(".log") or "llora" in filename or 'a800' not in filename:
+        if not filename.startswith("checkpoint-") or not filename.endswith(".log"):
+            continue
+        if "a800" not in filename:
+            continue
+        if "llora" in filename:
             continue
         parts = filename.split("-")
-        if "llama2" in filename:
-            model_data = data_llama2
-        elif "llama3" in filename:
-            model_data = data_llama3
-        else:
+        model = "llama2" if "llama2" in filename else "llama3" if "llama3" in filename else None
+        if model is None:
             continue
-        seq = [p for p in parts if p.isdigit()]
-        if not seq or seq[0] not in seq_map:
+        method = "lora" if "baseline" in filename else "jenga"
+        seq_digits = next((p for p in parts if p.isdigit() and p in SEQ_MAP), None)
+        if not seq_digits:
             continue
-        seq_str = seq_map[seq[0]]
+        seq_label = SEQ_MAP[seq_digits]
         filepath = os.path.join(log_dir, filename)
-        
-        if "baseline" in filename:
-            method = "lora"
-        elif "llora" in filename:
-            method = "longlora"
-        else:
-            method = "ours"
-            
         try:
-            with open(filepath, "r") as f:
-                lines = f.readlines()
-            match = re.search(r"total time:\s*([\d.]+)", lines[-1])
-            if not match:
-                total_time = 0
-            else:
-                total_time = float(match.group(1))
-            # Place in correct sequence position
-            idx = model_data["Seq"].index(seq_str)
-            while len(model_data["lora"]) <= idx:
-                model_data["lora"].append(0.0)
-            while len(model_data["ours"]) <= idx:
-                model_data["ours"].append(0.0)
+            with open(filepath) as f:
+                content = f.read()
+        except Exception:
+            continue
+        match = re.search(r"total time:\s*([\d.]+)", content)
+        if match:
+            data[model][method][seq_label] = float(match.group(1))
+    return data
 
-            model_data[method][idx] = round(total_time, 3)
-        except Exception as e:
-            print(f"Error processing {filename}: {e}")
 
-    return data_llama2, data_llama3
+def render(out_path):
+    data = parse_logs("logs/end2end/time")
+    n = len(SEQ_ORDER)
+    raw = {s: [0.0, 0.0, 0.0, 0.0] for s in SEQ_ORDER}
+    for s in SEQ_ORDER:
+        raw[s][0] = data["llama2"]["lora"][s]
+        raw[s][1] = data["llama2"]["jenga"][s]
+        raw[s][2] = data["llama3"]["lora"][s]
+        raw[s][3] = data["llama3"]["jenga"][s]
 
-data_llama2, data_llama3 = parse_llama_logs("logs/end2end/time")
+    norm = {s: [0.0, 0.0, 0.0, 0.0] for s in SEQ_ORDER}
+    for s in SEQ_ORDER:
+        ref = max(raw[s] + [1.0])
+        norm[s] = [v / ref for v in raw[s]]
 
-colors = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
+    bar_width = 0.2
+    x = np.arange(n)
 
-seq_lengths = data_llama2["Seq"]
-bar_width = 0.2
-x = np.arange(len(seq_lengths))
+    fig, ax = plt.subplots(figsize=(9, 3.0))
+    ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+    for j in range(4):
+        offset = (j - 1.5) * bar_width
+        heights = [norm[s][j] for s in SEQ_ORDER]
+        ax.bar(x + offset, heights, bar_width,
+               color=PALETTE[j], edgecolor="black", zorder=3,
+               label=SERIES_LABELS[j])
 
-# calculate the speedup
-speedup_llama2 = [data_llama2["lora"][i] / data_llama2["ours"][i] for i in range(len(seq_lengths))]
-speedup_llama3 = [data_llama3["lora"][i] / data_llama3["ours"][i] if data_llama3["lora"][i] is not None else None for i in range(len(seq_lengths))]
-print(speedup_llama2)
-print(speedup_llama3)
+    for i, s in enumerate(SEQ_ORDER):
+        for j in range(4):
+            if raw[s][j] > 0:
+                continue
+            xpos = x[i] + (j - 1.5) * bar_width
+            ax.text(xpos, 0.55, "OOM", ha="center", va="bottom",
+                    fontsize=11, color="#cc1f1f", rotation=90)
+        lora_l2, jenga_l2, lora_l3, jenga_l3 = raw[s]
+        if lora_l2 > 0 and jenga_l2 > 0:
+            xpos = x[i] + (1 - 1.5) * bar_width
+            ax.text(xpos, 0.55, f"{lora_l2 / jenga_l2:.2f}x",
+                    ha="center", va="bottom", fontsize=11,
+                    rotation=90, color="#222")
+        if lora_l3 > 0 and jenga_l3 > 0:
+            xpos = x[i] + (3 - 1.5) * bar_width
+            ax.text(xpos, 0.55, f"{lora_l3 / jenga_l3:.2f}x",
+                    ha="center", va="bottom", fontsize=11,
+                    rotation=90, color="#222")
 
-# normalize the data with the largest value in one sequence length
-for length in seq_lengths:
-    idx = seq_lengths.index(length)
-    max_val = max(data_llama2["lora"][idx], data_llama2["ours"][idx], data_llama3["lora"][idx], data_llama3["ours"][idx])
-    data_llama2["lora"][idx] /= max_val
-    data_llama2["ours"][idx] /= max_val
-    data_llama3["lora"][idx] /= max_val
-    data_llama3["ours"][idx] /= max_val
+    ax.set_xticks(x)
+    ax.set_xticklabels(SEQ_ORDER, fontsize=13)
+    ax.set_yticks([0.6, 0.7, 0.8, 0.9, 1.0])
+    ax.tick_params(axis="y", labelsize=13)
+    ax.set_ylim(0.5, 1.06)
+    ax.set_xlabel("Sequence Length", fontsize=13)
+    ax.set_ylabel("Execution Time (Normalized)", fontsize=13)
 
-fig, ax = plt.subplots(figsize=(8, 2))
+    header_y = 1.06
+    ax.legend(loc="lower left", bbox_to_anchor=(0.0, header_y),
+              ncol=4, frameon=False, fontsize=11, handletextpad=0.4,
+              columnspacing=1.0, borderpad=0.0, borderaxespad=0.0)
 
-plt.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path}")
 
-# Llama2
-ax.bar(x - bar_width * 1.5, data_llama2["lora"], bar_width, color=colors[0], edgecolor="black", zorder=3)
-ax.bar(x - bar_width * 0.5, data_llama2["ours"], bar_width, color=colors[1], edgecolor="black", zorder=3)
 
-# Llama3
-ax.bar(x + bar_width * 0.5, [v if v is not None else 0 for v in data_llama3["lora"]], bar_width, color=colors[2], edgecolor="black", zorder=3)
-ax.bar(x + bar_width * 1.5, [v if v is not None else 0 for v in data_llama3["ours"]], bar_width, color=colors[3], edgecolor="black", zorder=3)
-
-plt.ylim(0.5, 1.1)
-plt.yticks(fontsize=14)
-plt.xticks(fontsize=14)
-ax.set_xticks(x)
-ax.set_xticklabels(seq_lengths)
-ax.set_xlabel("Sequence Length", fontsize=14)
-
-plt.tight_layout()
-plt.savefig("output_figures/end2end/time/time-seq.pdf")
+if __name__ == "__main__":
+    render("output_figures/end2end/time/time-seq.pdf")
