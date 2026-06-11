@@ -264,16 +264,6 @@ Third, the **2D sparsity adapter** — trained for the same number of steps on t
 
 Peak GPU memory is flat across all five states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across all five.
 
-### 6.2 Composition with Hidden Dimension Sparsity
-
-The fourth and fifth rows of the table report the composition of Jenga's per layer token sparsity with LongLoRA's shifted attention (the authors' Figure 19 upper). The two sparsity mechanisms operate on orthogonal axes: Jenga prunes along the token axis, the LongLoRA shift restructures the head axis. The combination is a plausible candidate for free compounding.
-
-We tested the composition by training a LoRA adapter from step zero on the `modeling_llama_2D` variant of the forward pass with Token Merging active. The shifted attention imposes a divisibility constraint: it splits heads in half and rolls one half by half a group, which requires the kept token count to be divisible by 8. Appending one summary token (Section 5) would violate this constraint at sparse layers. We therefore use a **post hoc broadcast** variant of Token Merging for the 2D path: the merged token is not appended to the attention input — instead, the mean of the pre drop hidden states is computed outside the attention call and broadcast directly onto the dropped positions at scatter time. The merged token in this variant does not modulate through attention with the kept keys; it simply replaces the zero residual at dropped positions with a static mean.
-
-The 500-document evaluation shows that the composition regresses on quality. At the same 2,400 step training budget, the 2D adapter reaches loss 3.040 under hard drop and 3.326 under merging, both substantially worse than the Token Merging adapter on `modeling_llama` (1.716). Two factors plausibly contribute. The shifted attention's head split breaks global causal structure across half the heads, making the predictor's block scores less informative downstream; and the post hoc broadcast is a weaker form of soft elimination than the in-attention variant of Section 5, because the merged token never attends to the kept keys. Both contribute, and we cannot disentangle them with this experiment.
-
-We report this as an honest negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms. The authors' Figure 17 reports a 2.04× *wall clock* speedup for the 2D composition; our measurement of *forward loss* does not contradict that claim — it merely shows that the wall clock benefit is not currently transferable to a quality improvement at the budget evaluated.
-
 ![Per document forward loss distribution across the states](output_figures/extensions/token_merging/loss-landscape.pdf)
 
 *Figure 19. Loss landscape across 500 held out documents. For each state, per document forward loss is sorted ascending and plotted as a beady line, so the shape of each curve is that state's loss distribution. The curves separate cleanly with negligible overlap, confirming the headline numbers reflect a population effect rather than small sample variance.*
@@ -285,6 +275,16 @@ We report this as an honest negative result that bounds the regime in which Toke
 ![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train-loss-i4.pdf)
 
 *Figure 21. Training loss for the Token Merging adapter with merging enabled from the first optimizer step. Raw per logging step loss in light grey, smoothed ten step moving average in dark blue. The adapter reaches its converged band of approximately 1.4–1.6 forward loss by step 200 and remains there for the remainder of the 2,400 step schedule.*
+
+### 6.2 Composition with Hidden Dimension Sparsity
+
+The fourth and fifth rows of the table report the composition of Jenga's per layer token sparsity with LongLoRA's shifted attention (the authors' Figure 19 upper). The two sparsity mechanisms operate on orthogonal axes: Jenga prunes along the token axis, the LongLoRA shift restructures the head axis. The combination is a plausible candidate for free compounding.
+
+We tested the composition by training a LoRA adapter from step zero on the `modeling_llama_2D` variant of the forward pass with Token Merging active. The shifted attention imposes a divisibility constraint: it splits heads in half and rolls one half by half a group, which requires the kept token count to be divisible by 8. Appending one summary token (Section 5) would violate this constraint at sparse layers. We therefore use a **post hoc broadcast** variant of Token Merging for the 2D path: the merged token is not appended to the attention input — instead, the mean of the pre drop hidden states is computed outside the attention call and broadcast directly onto the dropped positions at scatter time. The merged token in this variant does not modulate through attention with the kept keys; it simply replaces the zero residual at dropped positions with a static mean.
+
+The 500-document evaluation shows that the composition regresses on quality. At the same 2,400 step training budget, the 2D adapter reaches loss 3.040 under hard drop and 3.326 under merging, both substantially worse than the Token Merging adapter on `modeling_llama` (1.716). Two factors plausibly contribute. The shifted attention's head split breaks global causal structure across half the heads, making the predictor's block scores less informative downstream; and the post hoc broadcast is a weaker form of soft elimination than the in-attention variant of Section 5, because the merged token never attends to the kept keys. Both contribute, and we cannot disentangle them with this experiment.
+
+We report this as an honest negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms. The authors' Figure 17 reports a 2.04× *wall clock* speedup for the 2D composition; our measurement of *forward loss* does not contradict that claim — it merely shows that the wall clock benefit is not currently transferable to a quality improvement at the budget evaluated.
 
 ![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train-loss-i5.pdf)
 
