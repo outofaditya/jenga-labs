@@ -1,7 +1,7 @@
 """Evaluation harness for the 2D sparsity adapter.
 
 Loads the 2D sparsity model (Jenga token sparsity + LongLoRA shifted
-attention) with the retrained I5 LoRA adapter and measures forward loss
+attention) with the retrained 2D LoRA adapter and measures forward loss
 on a held out RedPajama slice under two modes:
 
   baseline_2d  config.merge_eliminated = False  (2D sparsity only)

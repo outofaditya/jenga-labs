@@ -2,7 +2,7 @@
 # train a LoRA adapter on the 2D sparsity model (Jenga token
 # sparsity composed with LongLoRA shifted attention) with post hoc
 # broadcast merging enabled from step 0. 2400 steps. Output writes to
-# checkpoints/peft_model_2d_merge so the I4 adapter is preserved.
+# checkpoints/peft_model_2d_merge so the Token Merging adapter is preserved.
 set -e
 cd "$(dirname "$0")/../.."
 

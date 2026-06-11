@@ -543,7 +543,7 @@ class LlamaFlashAttention2(LlamaAttention):
                 _, idx_blocks = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
                 idx_blocks = idx_blocks.sort().values  # (bsz, q_len_now) kept block ids
                 num_blocks_total = sum_q.size(1)
-                # Extension C (I3): soft elimination via mean pooling. When
+                # Token Merging extension. Soft elimination via mean pooling. When
                 # config.merge_eliminated is True and any blocks would be
                 # dropped, mean pool the dropped block tokens into one merged
                 # block appended to the kept tokens. With the flag False the

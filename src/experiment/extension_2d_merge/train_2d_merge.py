@@ -2,7 +2,7 @@
 (Jenga token sparsity composed with LongLoRA shifted attention) with the
 post hoc broadcast merging variant enabled from step 0.
 
-Same hyperparameters as the I4 driver, only the modeling import and the
+Same hyperparameters as the Token Merging driver, only the modeling import and the
 output_dir change. The merge implementation in modeling_llama_2D.py is
 post hoc broadcast: the merged vector is scattered onto the dropped
 positions in the layer output, leaving the kept tokens' shifted

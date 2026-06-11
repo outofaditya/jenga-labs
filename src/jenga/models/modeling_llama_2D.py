@@ -543,7 +543,7 @@ class LlamaFlashAttention2(LlamaAttention):
                 _, kept_block_idx = torch.topk(sum_q, q_len_now, largest=True, dim=-1)
                 kept_block_idx = kept_block_idx.sort().values
                 num_blocks_total = sum_q.size(1)
-                # Extension D (I5): post hoc broadcast merging in the 2D path.
+                # Post hoc broadcast merging in the 2D path.
                 # The shifted attention requires q_len_now divisible by 8, so we
                 # cannot append the merged token to the attention input as in
                 # modeling_llama.py. Instead we compute the merged vector from

@@ -1,6 +1,6 @@
 """Parse the measure_2d eval log into a per document CSV.
 
-The I5 eval emits one block per mode:
+The 2D eval emits one block per mode:
   === 2d adapter ===
   [baseline_2d] doc N/M loss=... dt=...
   ...

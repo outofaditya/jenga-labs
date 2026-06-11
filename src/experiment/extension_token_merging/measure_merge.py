@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
-Extension C (I3) measurement: compare baseline Jenga (hard drop) against
-Jenga + Token Merging (soft elimination) on the same Llama 2 7B + Jenga
-adapter setup. Run a brief forward pass over RedPajama documents in each
-mode, capture peak memory and mean next token loss, write to CSV.
+Token Merging inference measurement: compare baseline Jenga (hard drop)
+against Jenga + Token Merging (soft elimination) on the same Llama 2 7B +
+Jenga adapter setup. Run a brief forward pass over RedPajama documents
+in each mode, capture peak memory and mean next token loss, write to CSV.
 
 Inference only (no fine tuning). Single seed, batch size 1, sequence
 length 8192. Token merging is gated by config.merge_eliminated.

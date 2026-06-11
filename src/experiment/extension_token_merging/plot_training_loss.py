@@ -1,8 +1,8 @@
 """Plot a LoRA training loss curve in the report's standard line plot style.
 
 Two palettes:
-  cool  — used for the Token Merging adapter (I4)
-  warm  — used for the 2D sparsity adapter (I5)
+  cool  — used for the Token Merging adapter
+  warm  — used for the 2D sparsity adapter
 
 The legend mirrors the rest of the report: rectangular swatches with a
 black border, Title Case labels, anchored to the top right.
