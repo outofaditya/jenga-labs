@@ -1,27 +1,24 @@
 """Token merging comparison figures.
 
-Two figures.
-
   loss-landscape.pdf
-    The loss landscape: per held out document forward loss, sorted
-    ascending within each state and plotted as a beady line (markers
-    sampled every 25 documents so 500 points read clearly). The shape
-    of each curve is the loss distribution for that state.
+    Per held out document forward loss, sorted ascending within each
+    state and plotted as a smooth line (no markers, predictor-loss
+    idiom). The shape of each curve is the loss distribution for that
+    state. Legend sits inside the chart on the upper right.
 
   comparison.pdf
-    Normalized Loss, PPL, and Peak Memory across the three states as a
-    grouped bar chart, in the idiom of the end to end memory comparison
-    figure.
+    Normalized Loss, PPL, and Peak Memory across the trained states as
+    a grouped bar chart. Legend aligned to the top right.
 
-Both figures use the project palette, horizontal legend laid out on top
-of the axes outside the figure box, Title Case labels, and bbox_inches
-'tight' so labels never clip.
+Both figures use the project palette, Title Case labels, and
+bbox_inches='tight' so labels never clip.
 """
 import argparse
 import csv
 import os
 from collections import defaultdict
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -66,41 +63,27 @@ def collect_perdoc(perdoc_csv, perdoc_2d_csv=None):
     return by_state
 
 
-def horizontal_top_legend(fig, ax, ncols):
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels,
-               loc="upper center",
-               bbox_to_anchor=(0.5, 1.02),
-               ncol=ncols,
-               frameon=False,
-               fontsize=11)
-
-
-def plot_perdoc(by_state, out_path, marker_every=25):
-    fig, ax = plt.subplots(figsize=(7, 3))
+def plot_perdoc(by_state, out_path):
+    fig, ax = plt.subplots(figsize=(6, 4))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
+    handles = []
     for i, key in enumerate(STATE_KEYS):
         if key not in by_state or not by_state[key]:
             continue
         losses = sorted(by_state[key])
         x = np.linspace(1, len(losses), len(losses))
-        ax.plot(x, losses,
-                color="black",
-                marker="o",
-                markersize=4,
-                markerfacecolor=PALETTE[i],
-                markeredgewidth=0.5,
-                markevery=marker_every,
-                linewidth=1.0,
-                zorder=100,
-                label=STATE_LABELS[i])
+        ax.plot(x, losses, color=PALETTE[i], linewidth=1.6, zorder=3)
+        handles.append(mpatches.Patch(facecolor=PALETTE[i], edgecolor="black",
+                                      label=STATE_LABELS[i]))
     ax.set_xlim(0, max((len(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]), default=1) + 1)
     ax.set_xlabel("Document Rank (Sorted Ascending Per State)", fontsize=12)
     ax.set_ylabel("Forward Loss", fontsize=12)
     ax.tick_params(axis="both", labelsize=12)
     ax.set_ylim(0, max((max(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]), default=1.0) * 1.1)
 
-    horizontal_top_legend(fig, ax, ncols=min(4, sum(1 for k in STATE_KEYS if k in by_state and by_state[k])))
+    ax.legend(handles=handles, loc="upper right", frameon=False,
+              fontsize=12, handletextpad=0.6, labelspacing=0.7,
+              borderaxespad=1.0)
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")
@@ -130,9 +113,12 @@ def plot_comparison(means, out_path):
     ax.set_xticklabels(labels_present, fontsize=11)
     ax.tick_params(axis="y", labelsize=12)
     ax.set_ylabel("Normalized To Max", fontsize=12)
-    ax.set_ylim(0, 1.15)
+    ax.set_ylim(0, 1.18)
 
-    horizontal_top_legend(fig, ax, ncols=3)
+    header_y = 1.04
+    ax.legend(loc="lower right", bbox_to_anchor=(1.0, header_y),
+              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
+              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")

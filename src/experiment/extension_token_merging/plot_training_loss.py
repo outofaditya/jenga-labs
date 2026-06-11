@@ -1,22 +1,28 @@
-"""Plot the I4 LoRA training loss curve.
+"""Plot a LoRA training loss curve in the report's standard line plot style.
 
-Matches the visual idiom of src/experiment/ablation/predictor/plot_loss.py:
-compact 4 x 3 figure, smooth lines in the project palette, no markers,
-dashed y grid, 12 pt ticks. Two traces are drawn, the raw per logging
-step loss and a moving average. Horizontal legend on top, Title Case
-labels, bbox_inches='tight' on save.
+Two palettes:
+  cool  — used for the Token Merging adapter (I4)
+  warm  — used for the 2D sparsity adapter (I5)
+
+The legend mirrors the rest of the report: rectangular swatches with a
+black border, Title Case labels, anchored to the top right.
 """
 import argparse
 import ast
 import os
 import re
 
+import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 
 
 LOSS_PATTERN = re.compile(r"\{'loss': [^}]+\}")
 LOGGING_STEPS = 20
-PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D']
+
+PALETTES = {
+    "cool": {"raw": "#5D7F84", "smoothed": "#255475"},
+    "warm": {"raw": "#F3AE75", "smoothed": "#D6838D"},
+}
 
 
 def parse_log(path):
@@ -52,6 +58,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log", default="logs/extensions/token_merging/train-llama2-8192-a100.log")
     parser.add_argument("--out", default="output_figures/extensions/token_merging/train-loss-i4.pdf")
+    parser.add_argument("--palette", choices=["cool", "warm"], default="cool")
     parser.add_argument("--window", type=int, default=10)
     args = parser.parse_args()
 
@@ -59,23 +66,27 @@ def main():
     if not losses:
         raise SystemExit(f"no loss entries parsed from {args.log}")
     smoothed = moving_average(losses, args.window)
+    palette = PALETTES[args.palette]
 
     os.makedirs(os.path.dirname(args.out), exist_ok=True)
     fig, ax = plt.subplots(figsize=(5, 3))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
-    ax.plot(steps, losses, color=PALETTE[1], linewidth=2, label="Raw")
-    ax.plot(steps, smoothed, color=PALETTE[0], linewidth=2, label=f"{args.window} Step Moving Average")
+    ax.plot(steps, losses, color=palette["raw"], linewidth=2, zorder=3)
+    ax.plot(steps, smoothed, color=palette["smoothed"], linewidth=2, zorder=4)
     ax.set_xlabel("Training Step", fontsize=12)
     ax.set_ylabel("Loss", fontsize=12)
     ax.tick_params(axis="both", labelsize=12)
 
-    handles, labels = ax.get_legend_handles_labels()
-    fig.legend(handles, labels,
-               loc="upper center",
-               bbox_to_anchor=(0.5, 1.02),
-               ncol=2,
-               frameon=False,
-               fontsize=11)
+    handles = [
+        mpatches.Patch(facecolor=palette["raw"], edgecolor="black", label="Raw"),
+        mpatches.Patch(facecolor=palette["smoothed"], edgecolor="black",
+                       label=f"{args.window} Step Moving Average"),
+    ]
+    header_y = 1.04
+    ax.legend(handles=handles, loc="lower right",
+              bbox_to_anchor=(1.0, header_y), ncol=2, frameon=False,
+              fontsize=11, handletextpad=0.4, columnspacing=1.2,
+              borderpad=0.0, borderaxespad=0.0)
     plt.savefig(args.out, bbox_inches="tight")
     plt.close()
     print(f"wrote {args.out} ({len(losses)} points)")

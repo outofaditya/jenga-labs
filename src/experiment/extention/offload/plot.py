@@ -1,92 +1,102 @@
+"""Paper Figure 19 (b) Sparsity-sensitive Offload panel.
+
+Two bars per sequence length: Naïve (the offload baseline) and Jenga
+(offload with token sparsity active). Bars normalized to Naïve = 1.0 per
+sequence length. Speedup Naïve / Jenga written inside each Jenga bar.
+"""
+import os
+import re
+
 import matplotlib.pyplot as plt
 import numpy as np
-import re
-import os
 
-def parse_timing_log(log_dir):
-    data = []
 
+PALETTE = ["#DCBCAC", "#F3AE75"]
+SERIES = ["naive", "jenga"]
+SERIES_LABELS = ["Naïve", "Jenga"]
+SEQ_KEYS = [4096, 6144, 8192, 10240, 12288, 14336, 16384]
+SEQ_LABELS = ["4K", "6K", "8K", "10K", "12K", "14K", "16K"]
+
+
+def parse_logs(log_dir="logs/extension/offload"):
+    times = {s: {k: 0.0 for k in SERIES} for s in SEQ_KEYS}
     for filename in os.listdir(log_dir):
         if not filename.endswith(".log"):
             continue
-    
-        filepath = os.path.join(log_dir, filename)
+        path = os.path.join(log_dir, filename)
         try:
-            with open(filepath, "r") as f:
-                lines = [line.strip() for line in f if "total time" in line]
-        except Exception as e:
-            continue  # Skip unreadable files
-        
-        base = filename.replace(".log", "")
-        if "baseline" in base:
-            case_type = "Origin"
-            base = base.replace("-baseline", "")
-        elif "ours" in base:
-            case_type = "Jenga"
-            base = base.replace("-ours", "")
+            with open(path) as f:
+                content = f.read()
+        except Exception:
+            continue
+        if "baseline" in filename:
+            method = "naive"
+        elif "ours" in filename:
+            method = "jenga"
         else:
             continue
-        
-        parts = base.split("_")
-        model = parts[0]
-        seq_len = parts[1]
-        
-        case_name = f"{int(seq_len)//1024}K {case_type}"
-        
-        match = re.search(r"total time:\s*([\d.]+)", lines[-1])
-        time = float(match.group(1)) if match else 0
+        parts = filename.replace(".log", "").split("_")
+        seq = None
+        for p in parts:
+            head = p.split("-")[0]
+            if head.isdigit():
+                seq = int(head)
+                break
+        if seq not in times:
+            continue
+        last = None
+        for m in re.finditer(r"total time:\s*([\d.]+)", content):
+            last = m
+        if last is None:
+            continue
+        times[seq][method] = float(last.group(1))
+    return times
 
-        data.append({"case": case_name, "total_time": time})
-    
-    
-    return data
 
-data = parse_timing_log("logs/extension/offload")
-# data = [
-#     {"case": "4K Origin",   "total_time": 0},
-# ]
+def render(out_path):
+    times = parse_logs()
+    raw = {s: [times[s]["naive"], times[s]["jenga"]] for s in SEQ_KEYS}
+    norm = {s: ([v / raw[s][0] if raw[s][0] else 0.0 for v in raw[s]]) for s in SEQ_KEYS}
 
-colors = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
-cases = [d['case'] for d in data]
-case_types = ['Origin', 'Jenga']
-sequence_lengths = ['4K', '6K', '8K', '10K', '12K', '14K', '16K']
+    bar_width = 0.32
+    x = np.arange(len(SEQ_KEYS))
 
-grouped_data = {seq_len: {ctype: 0 for ctype in case_types} for seq_len in sequence_lengths}
-for d in data:
-    seq_len, ctype = d['case'].split(' ')[0], d['case'].split(' ')[-1]
-    grouped_data[seq_len][ctype] = d['total_time']
+    fig, ax = plt.subplots(figsize=(9, 2.8))
+    ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
 
-# calculate the speedup
-speedup_data = {seq_len: 0 for seq_len in sequence_lengths}
-for seq_len in sequence_lengths:
-    speedup_data[seq_len] = grouped_data[seq_len]['Origin'] / grouped_data[seq_len]['Jenga']
-print(speedup_data)
+    for j, _ in enumerate(SERIES):
+        heights = [norm[s][j] for s in SEQ_KEYS]
+        ax.bar(x + j * bar_width, heights, bar_width,
+               color=PALETTE[j], edgecolor="black", zorder=3,
+               label=SERIES_LABELS[j])
 
-# normalize the data (Origin as the baseline)
-for seq_len in sequence_lengths:
-    for ctype in case_types:
-        if ctype != 'Origin':
-            grouped_data[seq_len][ctype] /= grouped_data[seq_len]['Origin']
-    grouped_data[seq_len]['Origin'] = 1.0
+    for i, s in enumerate(SEQ_KEYS):
+        naive, jenga = raw[s]
+        if naive > 0 and jenga > 0:
+            top = norm[s][1]
+            ax.text(x[i] + 1 * bar_width, top + 0.012, f"{naive / jenga:.2f}x",
+                    ha="center", va="bottom", fontsize=12, rotation=90, color="#222")
 
-x = np.arange(len(sequence_lengths))
-width = 0.25
+    ax.set_xticks(x + bar_width / 2)
+    ax.set_xticklabels(SEQ_LABELS, fontsize=13)
+    ax.set_yticks([0.75, 1.0])
+    ax.tick_params(axis="y", labelsize=13)
+    ax.set_ylim(0.7, 1.25)
+    ax.set_xlabel("Sequence Length", fontsize=13)
+    ax.set_ylabel("Execution Time (Normalized)", fontsize=13)
 
-fig, ax = plt.subplots(figsize=(8, 2))
+    header_y = 1.04
+    ax.legend(loc="lower right", bbox_to_anchor=(1.0, header_y),
+              ncol=2, frameon=False, fontsize=12, handletextpad=0.4,
+              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
+    ax.text(0.0, header_y, "(b) Sparsity-sensitive Offload",
+            transform=ax.transAxes, ha="left", va="bottom",
+            fontsize=13, fontweight="bold")
 
-for i, ctype in enumerate(case_types):
-    times = [grouped_data[seq_len][ctype] for seq_len in sequence_lengths]
-    ax.bar(x + i * width, times, width, label=ctype, color=colors[i % len(colors) + 3], edgecolor='black', zorder=3)
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    print(f"wrote {out_path}")
 
-ax.set_xticks(x + width)
-ax.set_xticklabels(sequence_lengths)
-ax.set_ylim(0.5, 1.2)
-ax.set_xlabel('Sequence Length', fontsize=14)
-ax.set_ylabel('Execution Time (ms)', fontsize=14)
-ax.tick_params(axis='x', labelsize=14)
-ax.tick_params(axis='y', labelsize=14)
-ax.grid(axis='y', linestyle='--', alpha=0.7)
 
-plt.tight_layout()
-plt.savefig('output_figures/extension/offload/offload.pdf')
-plt.close()
+if __name__ == "__main__":
+    render("output_figures/extension/offload/offload.pdf")
