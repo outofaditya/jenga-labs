@@ -264,15 +264,15 @@ Third, the **2D sparsity adapter** — trained for the same number of steps on t
 
 Peak GPU memory is flat across all five states (within 1.5 MB of one another on a 20 GB allocation). Mean forward wall clock is within noise across all five.
 
-![Per document forward loss distribution across the states](output_figures/extensions/token_merging/loss-landscape.pdf)
+![Per document forward loss distribution across the states](output_figures/improvement/token_merging/loss-landscape.pdf)
 
 *Figure 19. Loss landscape across 500 held out documents. For each of the four states, the 500 per document forward losses are sorted ascending and drawn as a smooth line, so the x axis is a document rank index (1 to 500, easiest to hardest) and the y axis is forward loss; the shape of each curve is the empirical loss distribution for that state. The four curves separate cleanly with essentially no crossover, which means the retrained Token Merging adapter does not just beat the others on average — it beats them on essentially every document. The 28 percent and 48 percent headline reductions of Section 6.1 are therefore a population effect, not a few favourable documents.*
 
-![Normalized loss, PPL, and peak memory across the states](output_figures/extensions/token_merging/comparison.pdf)
+![Normalized loss, PPL, and peak memory across the states](output_figures/improvement/token_merging/comparison.pdf)
 
 *Figure 20. Normalized mean loss, PPL, and peak GPU memory across the four states. Each metric is divided by its own maximum so the three quantities can share a single y axis; the absolute numbers live in the Section 6.1 table. Two observations: the peak memory bars are visually identical because token merging adds approximately one token per sparse layer on top of roughly 819 kept tokens (about 0.12 percent overhead); and the loss and PPL bars move in the same direction but with different magnitudes, because PPL = exp(loss) amplifies loss differences exponentially.*
 
-![LoRA training loss with merging enabled from step 0](output_figures/extensions/token_merging/train-loss-i4.pdf)
+![LoRA training loss with merging enabled from step 0](output_figures/improvement/token_merging/train-loss-i4.pdf)
 
 *Figure 21. Training loss trajectory for the retrained Token Merging adapter (cool palette). Raw per logging step loss in teal; the dark blue line is a ten step moving average to make the trend legible against the noisier raw trace. The adapter starts near 5.0 (an untuned LoRA against the merged forward), descends quickly within the first 100 to 200 optimizer steps, and settles into a stable band of approximately 1.4 to 1.6 forward loss that it holds for the remainder of the 2,400 step schedule. Training is therefore well converged by the time the 500 document evaluation runs.*
 
@@ -286,7 +286,7 @@ The 500-document evaluation shows that the composition regresses on quality. At 
 
 We report this as an honest negative result that bounds the regime in which Token Merging compounds with other sparsity mechanisms. The authors' Figure 17 reports a 2.04× *wall clock* speedup for the 2D composition; our measurement of *forward loss* does not contradict that claim — it merely shows that the wall clock benefit is not currently transferable to a quality improvement at the budget evaluated.
 
-![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train-loss-i5.pdf)
+![LoRA training loss on the 2D sparsity model](output_figures/improvement/token_merging/train-loss-i5.pdf)
 
 *Figure 22. Training loss trajectory for the 2D sparsity adapter (Jenga token sparsity composed with LongLoRA shifted attention, with post hoc broadcast merging active from step zero) drawn in the warm palette to mark the negative result. Raw loss in peach, ten step moving average in pink. Compared with the cool curve in Figure 21, the trace is noisier and the converged band sits roughly one full unit higher (approximately 2.4 to 2.7 versus 1.4 to 1.6). The shifted attention's head split is the dominant source of the residual noise at the same step budget, and explains why the Section 6.2 evaluation row 4 lands above row 3.*
 
@@ -296,13 +296,13 @@ Two further modifications were implemented and evaluated as part of designing th
 
 **Convolutional block predictor.** We replaced Jenga's per block MLP predictor with a 1D convolutional variant that adds local context across adjacent blocks. The hypothesis was that a small receptive field over block scores would recover information the MLP throws away. The CNN predictor was trained on OPT 1.3B against the dense attention ground truth for 200 epochs over three seeds. The final five epoch mean squared error against the dense attention ground truth is roughly fifteen times worse than the MLP baseline, with gradient instabilities in the second half of training. The finding is that local convolutional context over blocks the predictor already scored as low information amplifies noise rather than recovers signal, ruling out this drop in replacement.
 
-![CNN predictor mean squared error versus epoch](output_figures/extensions/cnn_predictor/cnn-predictor.pdf)
+![CNN predictor mean squared error versus epoch](output_figures/improvement/cnn_predictor/cnn-predictor.pdf)
 
 *Figure 23. Mean squared error against the dense attention ground truth across training epochs for the original MLP predictor (dark blue) and the convolutional drop in replacement (pink). Both are trained from scratch on OPT 1.3B activations for 200 epochs across three seeds; the shaded band is the per epoch standard deviation across seeds. The MLP curve descends to a stable low band; the CNN curve initially keeps pace, then diverges in the second half of training with growing variance. The MLP retains the lower asymptote on every seed, confirming the convolutional replacement is the wrong axis of improvement.*
 
 **Dynamic adaptive threshold.** We implemented a runtime modulation of the retention ratio by predictor entropy: `t_dynamic = t_base + λ · (1 − entropy_norm)`. The hypothesis was that retaining more blocks in high entropy regions would buy quality at a small memory cost without changing the predictor or the LoRA adapter. The runtime hook is verified to swing the retention from 0.40 to 0.60 at λ = 0.2, demonstrating that the mechanism responds to input statistics as designed. Downstream perplexity at the new retention values cannot be measured with the artifact's existing perplexity tool, which uses the dense baseline forward path; we report the mechanism check as the actionable finding and treat downstream evaluation as out of scope for this report.
 
-![Adaptive threshold retention versus predictor entropy](output_figures/extensions/adaptive_thresholds/adaptive-threshold.pdf)
+![Adaptive threshold retention versus predictor entropy](output_figures/improvement/adaptive_thresholds/adaptive-threshold.pdf)
 
 *Figure 24. Adaptive threshold runtime check. Each point is one (layer, batch) sample. The x axis is the predictor entropy normalised to [0, 1] for that sample; the y axis is the retention ratio that the runtime hook selected for that sample under the adaptive formula `t_dynamic = t_base + λ · (1 − entropy_norm)`. Points are coloured by the modulation constant λ. At λ = 0.20 the retention swings from 0.40 (high entropy, more aggressive elimination) to 0.60 (low entropy, more retention), confirming that the runtime hook responds to input statistics as designed. The downstream perplexity impact of the mechanism is not measured here because the artifact's perplexity tool runs the dense forward and so does not exercise the adaptive Jenga path.*
 

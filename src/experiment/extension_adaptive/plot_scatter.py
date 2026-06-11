@@ -20,7 +20,7 @@ PALETTE = ["#255475", "#5D7F84", "#DCBCAC", "#D6838D"]
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--csv", default="logs/extensions/adaptive_thresholds/retention.csv")
-    parser.add_argument("--out", default="output_figures/extensions/adaptive_thresholds/adaptive-threshold.pdf")
+    parser.add_argument("--out", default="output_figures/improvement/adaptive_thresholds/adaptive-threshold.pdf")
     args = parser.parse_args()
 
     by_lam = defaultdict(list)

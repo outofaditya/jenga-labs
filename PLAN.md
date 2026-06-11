@@ -479,7 +479,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 * `logs/extensions/adaptive_thresholds/retention.json` with schema `{"lam": <float>, "seed": <int>, "batch_idx": <int>, "layer_idx": <int>, "entropy": <float>, "retention_ratio": <float>}`.
 * `logs/extensions/adaptive_thresholds/ppl.json` with schema `{"method": "jenga_adaptive", "lam": <float>, "seed": <int>, "ppl_proof_pile": <float>, "ppl_pg": <float>}` and matching rows for the equal budget static baseline.
-* `output_figures/extensions/adaptive_thresholds/scatter.pdf` and `output_figures/extensions/adaptive_thresholds/ppl_bar.pdf`.
+* `output_figures/improvement/adaptive_thresholds/scatter.pdf` and `output_figures/improvement/adaptive_thresholds/ppl_bar.pdf`.
 
 **Success Criteria.**
 
@@ -509,7 +509,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 **Outputs.**
 
 * `logs/extensions/cnn_predictor/loss.csv` columns `epoch,seed,predictor_type,train_loss`.
-* `output_figures/extensions/cnn_predictor/loss_curve.pdf`.
+* `output_figures/improvement/cnn_predictor/loss_curve.pdf`.
 
 **Success Criteria.**
 
@@ -534,12 +534,12 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 2. When the flag is True at layers index 15 onward, compute the dropped block indices, gather the dropped token hidden states from the pre drop layer input, mean pool to a single hidden dimensional vector, and append it to the kept sequence at the position of the last kept token.
 3. Reconstruct the layer output by scattering the kept tokens back to their original positions and broadcasting the merged token's attention output onto every dropped position so the residual stream carries a non zero representation across the dropped portion of the sequence.
 4. Build `src/experiment/extension_token_merging/measure_merge.py` to load the same model twice with the flag toggled and measure mean loss, peak memory, and mean forward time on the same four documents.
-5. Plot the result as a three column bar chart placed in `output_figures/extensions/token_merging/`.
+5. Plot the result as a three column bar chart placed in `output_figures/improvement/token_merging/`.
 
 **Outputs.**
 
 * `logs/extensions/token_merging/comparison.csv` columns `mode,n_docs,mean_loss,ppl_approx,peak_memory_mb,mean_forward_s`.
-* `output_figures/extensions/token_merging/bar.pdf`.
+* `output_figures/improvement/token_merging/bar.pdf`.
 
 **Success Criteria.**
 
@@ -569,7 +569,7 @@ These steps run on your laptop and on the Hugging Face web UI. They convert the 
 
 * `checkpoints/peft_model_merged/` directory with the trained LoRA weights and tokenizer state.
 * The third row of `logs/extensions/token_merging/comparison.csv` populated.
-* Updated `output_figures/extensions/token_merging/bar.pdf` with the third configuration.
+* Updated `output_figures/improvement/token_merging/bar.pdf` with the third configuration.
 
 **Success Criteria.**
 

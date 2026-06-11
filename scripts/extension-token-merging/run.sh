@@ -3,7 +3,7 @@
 # Llama 2 7B + Jenga adapter at 8K context. Inference only.
 set -e
 cd "$(dirname "$0")/../.."
-mkdir -p logs/extensions/token_merging output_figures/extensions/token_merging
+mkdir -p logs/extensions/token_merging output_figures/improvement/token_merging
 
 python src/experiment/extension_token_merging/measure_merge.py \
     --base_model checkpoints/llama2 \

@@ -3,7 +3,7 @@
 # per layer entropy vs token retention. Inference only.
 set -e
 cd "$(dirname "$0")/../.."
-mkdir -p logs/extensions/adaptive_thresholds output_figures/extensions/adaptive_thresholds
+mkdir -p logs/extensions/adaptive_thresholds output_figures/improvement/adaptive_thresholds
 
 python src/experiment/extension_adaptive/measure_retention.py \
     --base_model checkpoints/llama2 \

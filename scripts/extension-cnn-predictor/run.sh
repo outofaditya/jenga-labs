@@ -3,7 +3,7 @@
 # fixed RedPajama ground truth cache extracted from Llama 2 7B.
 set -e
 cd "$(dirname "$0")/../.."
-mkdir -p logs/extensions/cnn_predictor output_figures/extensions/cnn_predictor
+mkdir -p logs/extensions/cnn_predictor output_figures/improvement/cnn_predictor
 
 python src/experiment/extension_cnn_predictor/train_both.py \
     --model_path "${MODEL_PATH:-checkpoints/opt-1.3b}" \

@@ -130,7 +130,7 @@ def main():
     parser.add_argument("--perdoc_csv", default="logs/extensions/token_merging/comparison_500_perdoc.csv")
     parser.add_argument("--csv_2d", default="logs/extensions/token_merging_2d/comparison_500.csv")
     parser.add_argument("--perdoc_2d_csv", default="logs/extensions/token_merging_2d/comparison_500_perdoc.csv")
-    parser.add_argument("--out_dir", default="output_figures/extensions/token_merging")
+    parser.add_argument("--out_dir", default="output_figures/improvement/token_merging")
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
