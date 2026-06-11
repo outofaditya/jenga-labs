@@ -1,6 +1,0 @@
-Num validation tokens: 11337755
-data path dataset/PPL/test_pg19.bin
-base model checkpoints/llama2
-peft model checkpoints/peft_model/rp/8k/lora
-Using seq length 8192
-{'val_acc': 0.5577220320701599, 'val_loss': 1.9387611150741577, 'val_perplexity': 6.950126153267362, 'val_perplexity_per_chunk': tensor([6.9501])}

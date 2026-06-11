@@ -1,4 +1,0 @@
-label,mode,n_docs,mean_loss,ppl_approx,peak_memory_mb,mean_forward_s
-"Original adapter, hard drop",baseline,4,2.35546875,10.54306976753373,19804.046875,0.8664310574531555
-"Original adapter, token merging",merged,4,4.5078125,90.7231444115574,19804.9921875,0.7462484836578369
-"Retrained with merging, token merging",merged,4,1.595703125,4.931795522028942,19804.53125,0.7479807138442993
