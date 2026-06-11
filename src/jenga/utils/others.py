@@ -5,6 +5,7 @@ import numpy as np
 import torch
 import transformers
 import torch.nn as nn
+
 hidden_statess = []
 attn_maxpools = []
 
@@ -18,6 +19,7 @@ def seed_everything(seed=11):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+
 def smart_tokenizer_and_embedding_resize(
     special_tokens_dict: Dict,
     tokenizer: transformers.PreTrainedTokenizer,
@@ -28,22 +30,31 @@ def smart_tokenizer_and_embedding_resize(
     Note: This is the unoptimized version that may make your embedding size not be divisible by 64.
     """
     num_new_tokens = tokenizer.add_special_tokens(special_tokens_dict)
-    model.resize_token_embeddings(len(tokenizer)) # 调整模型嵌入层的大小以匹配tokenizer的长度
+    model.resize_token_embeddings(
+        len(tokenizer)
+    )  # 调整模型嵌入层的大小以匹配tokenizer的长度
 
     # 如果有新增的符号，更新这些新符号的嵌入使之与已有的嵌入平均值一致
     if num_new_tokens > 0:
-        #已有权重
+        # 已有权重
         input_embeddings = model.get_input_embeddings().weight.data
         output_embeddings = model.get_output_embeddings().weight.data
 
-        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(dim=0, keepdim=True)
-        #增加新符号权重
+        input_embeddings_avg = input_embeddings[:-num_new_tokens].mean(
+            dim=0, keepdim=True
+        )
+        output_embeddings_avg = output_embeddings[:-num_new_tokens].mean(
+            dim=0, keepdim=True
+        )
+        # 增加新符号权重
         input_embeddings[-num_new_tokens:] = input_embeddings_avg
         output_embeddings[-num_new_tokens:] = output_embeddings_avg
     return num_new_tokens
 
-def load_state_dict_into_model_with_deepspeed_stage3(model_to_load, state_dict, start_prefix, assign_to_params_buffers=False):
+
+def load_state_dict_into_model_with_deepspeed_stage3(
+    model_to_load, state_dict, start_prefix, assign_to_params_buffers=False
+):
     # Convert old format to new format if needed from a PyTorch state_dict
     old_keys = []
     new_keys = []
@@ -95,13 +106,19 @@ def load_state_dict_into_model_with_deepspeed_stage3(model_to_load, state_dict, 
 
             # In sharded models, each shard has only part of the full state_dict, so only gather
             # parameters that are in the current state_dict.
-            named_parameters = dict(module.named_parameters(prefix=prefix[:-1], recurse=False))
-            params_to_gather = [named_parameters[k] for k in state_dict.keys() if k in named_parameters]
+            named_parameters = dict(
+                module.named_parameters(prefix=prefix[:-1], recurse=False)
+            )
+            params_to_gather = [
+                named_parameters[k] for k in state_dict.keys() if k in named_parameters
+            ]
             if len(params_to_gather) > 0:
                 # because zero3 puts placeholders in model params, this context
                 # manager gathers (unpartitions) the params of the current layer, then loads from
                 # the state dict and then re-partitions them again
-                with deepspeed.zero.GatheredParameters(params_to_gather, modifier_rank=0):
+                with deepspeed.zero.GatheredParameters(
+                    params_to_gather, modifier_rank=0
+                ):
                     if torch.distributed.get_rank() == 0:
                         module._load_from_state_dict(*args)
             else:
@@ -111,11 +128,14 @@ def load_state_dict_into_model_with_deepspeed_stage3(model_to_load, state_dict, 
             if child is not None:
                 load(child, state_dict, prefix + name + ".", assign_to_params_buffers)
 
-    load(model_to_load, state_dict, prefix=start_prefix, assign_to_params_buffers=assign_to_params_buffers)
+    load(
+        model_to_load,
+        state_dict,
+        prefix=start_prefix,
+        assign_to_params_buffers=assign_to_params_buffers,
+    )
     # Delete `state_dict` so it could be collected by GC earlier. Note that `state_dict` is a copy of the argument, so
     # it's safe to delete it.
     del state_dict
 
     return error_msgs
-
-

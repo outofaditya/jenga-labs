@@ -9,6 +9,7 @@ positions in the layer output, leaving the kept tokens' shifted
 attention path untouched. This composes cleanly with the LongLoRA shift
 which requires q_len_now divisible by 8.
 """
+
 import math
 import os
 from dataclasses import dataclass, field
@@ -23,10 +24,9 @@ from transformers import AutoTokenizer, DataCollatorForLanguageModeling, Trainer
 
 from jenga.models.modeling_llama_2D import LlamaForCausalLM
 from jenga.utils.config_utils import get_llama_qk
-from jenga.utils.others import (seed_everything,
-                                smart_tokenizer_and_embedding_resize)
+from jenga.utils.others import seed_everything, smart_tokenizer_and_embedding_resize
 
-BEGIN_TOKEN, END_TOKEN = '<<BEGIN>>', '<<END>>'
+BEGIN_TOKEN, END_TOKEN = "<<BEGIN>>", "<<END>>"
 DEFAULT_PAD_TOKEN = "[PAD]"
 DEFAULT_EOS_TOKEN = "</s>"
 DEFAULT_BOS_TOKEN = "<s>"
@@ -92,7 +92,9 @@ def train():
     config.merge_eliminated = True
     config.time = False
 
-    pruned_cfg = torch.load(os.path.join(model_args.predictor_path, "pruned_config.pth"))
+    pruned_cfg = torch.load(
+        os.path.join(model_args.predictor_path, "pruned_config.pth")
+    )
     config.predictor_layers = pruned_cfg["layers"]
 
     model_dtype = torch.bfloat16 if training_args.bf16 else torch.float32
@@ -101,7 +103,9 @@ def train():
         torch_dtype=model_dtype,
         config=config,
     )
-    attn_state_dict = torch.load(os.path.join(model_args.predictor_path, "predictor.pth"), map_location="cpu")
+    attn_state_dict = torch.load(
+        os.path.join(model_args.predictor_path, "predictor.pth"), map_location="cpu"
+    )
     msd = model.state_dict()
     for k, v in attn_state_dict.items():
         if k in msd:

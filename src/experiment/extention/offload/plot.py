@@ -4,6 +4,7 @@ Two bars per sequence length: Naïve (the offload baseline) and Jenga
 (offload with token sparsity active). Bars normalized to Naïve = 1.0 per
 sequence length. Speedup Naïve / Jenga written inside each Jenga bar.
 """
+
 import os
 import re
 
@@ -56,7 +57,9 @@ def parse_logs(log_dir="logs/extension/offload"):
 def render(out_path):
     times = parse_logs()
     raw = {s: [times[s]["naive"], times[s]["jenga"]] for s in SEQ_KEYS}
-    norm = {s: ([v / raw[s][0] if raw[s][0] else 0.0 for v in raw[s]]) for s in SEQ_KEYS}
+    norm = {
+        s: ([v / raw[s][0] if raw[s][0] else 0.0 for v in raw[s]]) for s in SEQ_KEYS
+    }
 
     bar_width = 0.32
     x = np.arange(len(SEQ_KEYS))
@@ -66,16 +69,30 @@ def render(out_path):
 
     for j, _ in enumerate(SERIES):
         heights = [norm[s][j] for s in SEQ_KEYS]
-        ax.bar(x + j * bar_width, heights, bar_width,
-               color=PALETTE[j], edgecolor="black", zorder=3,
-               label=SERIES_LABELS[j])
+        ax.bar(
+            x + j * bar_width,
+            heights,
+            bar_width,
+            color=PALETTE[j],
+            edgecolor="black",
+            zorder=3,
+            label=SERIES_LABELS[j],
+        )
 
     for i, s in enumerate(SEQ_KEYS):
         naive, jenga = raw[s]
         if naive > 0 and jenga > 0:
             top = norm[s][1]
-            ax.text(x[i] + 1 * bar_width, top + 0.012, f"{naive / jenga:.2f}x",
-                    ha="center", va="bottom", fontsize=12, rotation=90, color="#222")
+            ax.text(
+                x[i] + 1 * bar_width,
+                top + 0.012,
+                f"{naive / jenga:.2f}x",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                rotation=90,
+                color="#222",
+            )
 
     ax.set_xticks(x + bar_width / 2)
     ax.set_xticklabels(SEQ_LABELS, fontsize=13)
@@ -86,12 +103,27 @@ def render(out_path):
     ax.set_ylabel("Execution Time (Normalized)", fontsize=13)
 
     header_y = 1.04
-    ax.legend(loc="lower right", bbox_to_anchor=(1.0, header_y),
-              ncol=2, frameon=False, fontsize=12, handletextpad=0.4,
-              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
-    ax.text(0.0, header_y, "(b) Sparsity-sensitive Offload",
-            transform=ax.transAxes, ha="left", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=2,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        0.0,
+        header_y,
+        "(b) Sparsity-sensitive Offload",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

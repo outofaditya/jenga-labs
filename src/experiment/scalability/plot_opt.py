@@ -1,4 +1,5 @@
 """Paper Figure 17 (right panel). Multi GPU scaling on OPT 6.7B."""
+
 import os
 import sys
 

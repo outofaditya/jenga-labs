@@ -6,6 +6,7 @@ All bars normalized to LoRA = 1.0 per sequence length. Speedups
 LoRA / Jenga and LoRA / Jenga-2D are written inside the Jenga and
 Jenga-2D bars respectively.
 """
+
 import os
 import re
 
@@ -52,8 +53,12 @@ def parse_logs(log_dir="logs/extension/2d"):
 
 def render(out_path):
     times = parse_logs()
-    raw = {s: [times[s]["lora"], times[s]["jenga"], times[s]["jenga_2d"]] for s in SEQ_KEYS}
-    norm = {s: ([v / raw[s][0] if raw[s][0] else 0.0 for v in raw[s]]) for s in SEQ_KEYS}
+    raw = {
+        s: [times[s]["lora"], times[s]["jenga"], times[s]["jenga_2d"]] for s in SEQ_KEYS
+    }
+    norm = {
+        s: ([v / raw[s][0] if raw[s][0] else 0.0 for v in raw[s]]) for s in SEQ_KEYS
+    }
 
     bar_width = 0.25
     x = np.arange(len(SEQ_KEYS))
@@ -63,20 +68,42 @@ def render(out_path):
 
     for j, _ in enumerate(SERIES):
         heights = [norm[s][j] for s in SEQ_KEYS]
-        ax.bar(x + j * bar_width, heights, bar_width,
-               color=PALETTE[j], edgecolor="black", zorder=3,
-               label=SERIES_LABELS[j])
+        ax.bar(
+            x + j * bar_width,
+            heights,
+            bar_width,
+            color=PALETTE[j],
+            edgecolor="black",
+            zorder=3,
+            label=SERIES_LABELS[j],
+        )
 
     for i, s in enumerate(SEQ_KEYS):
         lora, jenga, jenga2d = raw[s]
         if lora > 0 and jenga > 0:
             top = norm[s][1]
-            ax.text(x[i] + 1 * bar_width, top + 0.015, f"{lora / jenga:.2f}x",
-                    ha="center", va="bottom", fontsize=12, rotation=90, color="#222")
+            ax.text(
+                x[i] + 1 * bar_width,
+                top + 0.015,
+                f"{lora / jenga:.2f}x",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                rotation=90,
+                color="#222",
+            )
         if lora > 0 and jenga2d > 0:
             top = norm[s][2]
-            ax.text(x[i] + 2 * bar_width, top + 0.015, f"{lora / jenga2d:.2f}x",
-                    ha="center", va="bottom", fontsize=12, rotation=90, color="#222")
+            ax.text(
+                x[i] + 2 * bar_width,
+                top + 0.015,
+                f"{lora / jenga2d:.2f}x",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                rotation=90,
+                color="#222",
+            )
 
     ax.set_xticks(x + bar_width)
     ax.set_xticklabels(SEQ_LABELS, fontsize=13)
@@ -87,12 +114,27 @@ def render(out_path):
     ax.set_ylabel("Execution Time (Normalized)", fontsize=13)
 
     header_y = 1.04
-    ax.legend(loc="lower right", bbox_to_anchor=(1.0, header_y),
-              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
-              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
-    ax.text(0.0, header_y, "(a) 2D Sparsity",
-            transform=ax.transAxes, ha="left", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=3,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        0.0,
+        header_y,
+        "(a) 2D Sparsity",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

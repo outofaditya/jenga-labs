@@ -1,16 +1,19 @@
 import os
 from pathlib import Path
-from typing import (TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple,
-                    Union)
+from typing import Callable, Dict, List, Optional, Tuple
 
 import torch
 from accelerate import __version__ as accelerate_version
 from packaging import version
 from torch.utils.data import Dataset, SequentialSampler
 from transformers import Trainer
-from transformers.trainer import (IS_SAGEMAKER_MP_POST_1_10, SAFE_WEIGHTS_NAME,
-                                  WEIGHTS_NAME, logger,
-                                  remove_dummy_checkpoint)
+from transformers.trainer import (
+    IS_SAGEMAKER_MP_POST_1_10,
+    SAFE_WEIGHTS_NAME,
+    WEIGHTS_NAME,
+    logger,
+    remove_dummy_checkpoint,
+)
 from transformers.training_args import TrainingArguments
 from transformers.utils import is_sagemaker_mp_enabled, is_torch_xla_available
 
@@ -27,7 +30,7 @@ from transformers.utils import is_sagemaker_mp_enabled, is_torch_xla_available
 class TrainerNoShuffle(Trainer):
     def __init__(
         self,
-        model = None,
+        model=None,
         args: TrainingArguments = None,
         data_collator: Optional["DataCollator"] = None,
         train_dataset: Optional[Dataset] = None,
@@ -36,7 +39,10 @@ class TrainerNoShuffle(Trainer):
         model_init: Callable[[], "PreTrainedModel"] = None,
         compute_metrics: Optional[Callable[["EvalPrediction"], Dict]] = None,
         callbacks: Optional[List["TrainerCallback"]] = None,
-        optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (None, None),
+        optimizers: Tuple[torch.optim.Optimizer, torch.optim.lr_scheduler.LambdaLR] = (
+            None,
+            None,
+        ),
     ):
         super().__init__(
             model=model,
@@ -51,9 +57,11 @@ class TrainerNoShuffle(Trainer):
             optimizers=optimizers,
         )
 
-    def _get_train_sampler(self) -> Optional[torch.utils.data.Sampler]: # disable shuffling
+    def _get_train_sampler(
+        self,
+    ) -> Optional[torch.utils.data.Sampler]:  # disable shuffling
         return SequentialSampler(self.train_dataset)
-    
+
     def compute_loss(self, model, inputs, return_outputs=False):
         """
         How the loss is computed by Trainer. By default, all models return the loss in the first element.
@@ -93,15 +101,16 @@ class TrainerNoShuffle(Trainer):
             loss = outputs["loss"] if isinstance(outputs, dict) else outputs[0]
 
         return (loss, outputs) if return_outputs else loss
-    
+
 
 class TrainerSaveEmb(Trainer):
     def __init__(self, is_embed=False, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.is_embed = is_embed
-        
-        
-    def save_model(self, output_dir: Optional[str] = None, _internal_call: bool = False):
+
+    def save_model(
+        self, output_dir: Optional[str] = None, _internal_call: bool = False
+    ):
         """
         Will save the model, so you can reload it using `from_pretrained()`.
 
@@ -123,9 +132,10 @@ class TrainerSaveEmb(Trainer):
                 # 'user_content.pt' indicates model state_dict saved with smp >= 1.10
                 Path(os.path.join(output_dir, "user_content.pt")).touch()
         elif self.is_fsdp_enabled:
-            if ("FULL_STATE_DICT" in str(self.accelerator.state.fsdp_plugin.state_dict_type)) and (
-                version.parse(accelerate_version) > version.parse("0.24.1")
-            ):
+            if (
+                "FULL_STATE_DICT"
+                in str(self.accelerator.state.fsdp_plugin.state_dict_type)
+            ) and (version.parse(accelerate_version) > version.parse("0.24.1")):
                 state_dict = self.accelerator.get_state_dict(self.model)
                 if self.args.should_save:
                     self._save(output_dir, state_dict=state_dict)
@@ -142,14 +152,22 @@ class TrainerSaveEmb(Trainer):
                 if self.args.should_save:
                     self._save(output_dir, state_dict={})
                 # remove the dummy state_dict
-                remove_dummy_checkpoint(self.args.should_save, output_dir, [WEIGHTS_NAME, SAFE_WEIGHTS_NAME])
+                remove_dummy_checkpoint(
+                    self.args.should_save, output_dir, [WEIGHTS_NAME, SAFE_WEIGHTS_NAME]
+                )
                 self.model_wrapped.save_checkpoint(output_dir)
 
         elif self.args.should_save:
             self._save(output_dir)
             if self.is_embed:
-                selected_params = {n: p for n, p in self.model.named_parameters() if any(k in n for k in ["embed", "norm"])}
-                torch.save(selected_params, os.path.join(output_dir,"selected_weights.pth"))
+                selected_params = {
+                    n: p
+                    for n, p in self.model.named_parameters()
+                    if any(k in n for k in ["embed", "norm"])
+                }
+                torch.save(
+                    selected_params, os.path.join(output_dir, "selected_weights.pth")
+                )
 
         # Push to the Hub when `save_model` is called by the user.
         if self.args.push_to_hub and not _internal_call:

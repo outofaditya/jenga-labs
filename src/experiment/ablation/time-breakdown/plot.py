@@ -3,6 +3,7 @@ Llama 2 7B at 8 K LoRA, 8 K Jenga, 10 K LoRA, 10 K Jenga, 12 K Jenga,
 14 K Jenga, 16 K Jenga. Categories: forward, backward, optimizer step,
 prediction.
 """
+
 import os
 import re
 
@@ -40,7 +41,9 @@ def read_logs():
             continue
         with open(path) as f:
             lines = f.readlines()
-        time_line = next((line for line in reversed(lines) if "forward time" in line), None)
+        time_line = next(
+            (line for line in reversed(lines) if "forward time" in line), None
+        )
         if not time_line:
             continue
         m = re.search(
@@ -53,13 +56,15 @@ def read_logs():
         size_k = int(filename.split("-")[1]) // 1024
         tag = "LoRA" if "baseline" in filename else "Jenga"
         pred = predictor_times.get(size_k * 1024, 0.0) if tag == "Jenga" else 0.0
-        rows.append({
-            "case": f"{size_k}K {tag}",
-            "forward": fwd,
-            "backward": bwd,
-            "optimizer step": opt,
-            "prediction": pred,
-        })
+        rows.append(
+            {
+                "case": f"{size_k}K {tag}",
+                "forward": fwd,
+                "backward": bwd,
+                "optimizer step": opt,
+                "prediction": pred,
+            }
+        )
     return rows
 
 
@@ -78,27 +83,53 @@ def render(out_path):
         left = 0
         for j, stage in enumerate(STAGES):
             width = r[stage]
-            ax.barh(y_pos[i], width, left=left, color=PALETTE[j],
-                    edgecolor="black", height=bar_height, zorder=3,
-                    label=stage if i == 0 else None)
+            ax.barh(
+                y_pos[i],
+                width,
+                left=left,
+                color=PALETTE[j],
+                edgecolor="black",
+                height=bar_height,
+                zorder=3,
+                label=stage if i == 0 else None,
+            )
             left += width
 
     ax.set_yticks(y_pos)
     ax.set_yticklabels(cases, fontsize=13)
     ax.tick_params(axis="x", labelsize=13)
     ax.set_xlabel("Execution Time (ms)", fontsize=13)
-    totals = [r["forward"] + r["backward"] + r["optimizer step"] + r["prediction"] for r in rows]
+    totals = [
+        r["forward"] + r["backward"] + r["optimizer step"] + r["prediction"]
+        for r in rows
+    ]
     ax.set_xlim(0, max(totals) * 1.05)
 
     header_y = 1.04
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc="lower right",
-              bbox_to_anchor=(1.0, header_y), ncol=4, frameon=False,
-              fontsize=12, handletextpad=0.4, columnspacing=1.0,
-              borderpad=0.0, borderaxespad=0.0)
-    ax.text(-0.13, header_y, "(b) Execution Time",
-            transform=ax.transAxes, ha="left", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        handles,
+        labels,
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=4,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.0,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        -0.13,
+        header_y,
+        "(b) Execution Time",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

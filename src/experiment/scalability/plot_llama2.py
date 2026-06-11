@@ -1,4 +1,5 @@
 """Paper Figure 17 (left panel). Multi GPU scaling on Llama 2 7B."""
+
 import os
 import sys
 

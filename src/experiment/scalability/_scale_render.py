@@ -4,6 +4,7 @@ Each panel plots execution time (ms) vs GPU count for three sequence
 lengths (1K, 2K, 4K). Legend at top, bold model name inside the chart
 upper right.
 """
+
 import os
 import re
 
@@ -57,11 +58,20 @@ def render(model_key, model_display, out_path):
     handles = []
     for i, seq in enumerate(SEQ_KEYS):
         y = [times[seq][gc] for gc in GPU_COUNTS]
-        ax.plot(GPU_COUNTS, y, color=PALETTE[i], linewidth=1.6, zorder=3,
-                marker="o", markersize=7, markerfacecolor=PALETTE[i],
-                markeredgecolor=PALETTE[i])
-        handles.append(mpatches.Patch(facecolor=PALETTE[i], edgecolor="black",
-                                      label=SEQ_LABELS[i]))
+        ax.plot(
+            GPU_COUNTS,
+            y,
+            color=PALETTE[i],
+            linewidth=1.6,
+            zorder=3,
+            marker="o",
+            markersize=7,
+            markerfacecolor=PALETTE[i],
+            markeredgecolor=PALETTE[i],
+        )
+        handles.append(
+            mpatches.Patch(facecolor=PALETTE[i], edgecolor="black", label=SEQ_LABELS[i])
+        )
 
     ax.set_xticks(GPU_COUNTS)
     ax.set_xticklabels([str(gc) for gc in GPU_COUNTS], fontsize=13)
@@ -70,12 +80,28 @@ def render(model_key, model_display, out_path):
     ax.set_ylabel("Execution Time (ms)", fontsize=13)
 
     header_y = 1.04
-    ax.legend(handles=handles, loc="lower left",
-              bbox_to_anchor=(0.0, header_y), ncol=3, frameon=False,
-              fontsize=12, handletextpad=0.5, columnspacing=1.4,
-              borderpad=0.0, borderaxespad=0.0)
-    ax.text(0.97, 0.95, model_display, transform=ax.transAxes,
-            ha="right", va="top", fontsize=15, fontweight="bold")
+    ax.legend(
+        handles=handles,
+        loc="lower left",
+        bbox_to_anchor=(0.0, header_y),
+        ncol=3,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.5,
+        columnspacing=1.4,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        0.97,
+        0.95,
+        model_display,
+        transform=ax.transAxes,
+        ha="right",
+        va="top",
+        fontsize=15,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

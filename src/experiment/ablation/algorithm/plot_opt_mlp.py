@@ -1,6 +1,7 @@
 """Paper Figure 15 (bottom right). OPT 6.7B MLP layer ablation.
 Threshold is zero across all layers so only the memory line is drawn.
 """
+
 import os
 import sys
 

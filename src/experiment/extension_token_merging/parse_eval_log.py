@@ -17,13 +17,16 @@ mean. The eval script prints
 The section header is what disambiguates the second `[merged]` block
 (retrained) from the first one (original).
 """
+
 import argparse
 import csv
 import re
 from pathlib import Path
 
 
-DOC_LINE = re.compile(r"^\[(?P<mode>baseline|merged)\] doc (?P<idx>\d+)/(?P<total>\d+) loss=(?P<loss>[0-9.]+) dt=(?P<dt>[0-9.]+)s")
+DOC_LINE = re.compile(
+    r"^\[(?P<mode>baseline|merged)\] doc (?P<idx>\d+)/(?P<total>\d+) loss=(?P<loss>[0-9.]+) dt=(?P<dt>[0-9.]+)s"
+)
 SECTION = re.compile(r"^=== (?P<name>[^=]+?) ===")
 
 
@@ -35,7 +38,11 @@ def parse(path: str):
             line = line.strip()
             m = SECTION.match(line)
             if m:
-                current_section = "retrained" if "retrained" in m.group("name").lower() else "original"
+                current_section = (
+                    "retrained"
+                    if "retrained" in m.group("name").lower()
+                    else "original"
+                )
                 continue
             m = DOC_LINE.match(line)
             if m:
@@ -48,19 +55,23 @@ def parse(path: str):
                     state = "retrain_merge"
                 if state is None:
                     continue
-                rows.append({
-                    "state": state,
-                    "doc": int(m.group("idx")),
-                    "loss": float(m.group("loss")),
-                    "dt": float(m.group("dt")),
-                })
+                rows.append(
+                    {
+                        "state": state,
+                        "doc": int(m.group("idx")),
+                        "loss": float(m.group("loss")),
+                        "dt": float(m.group("dt")),
+                    }
+                )
     return rows
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--log", default="logs/extensions/token_merging/eval500.log")
-    parser.add_argument("--out", default="logs/extensions/token_merging/comparison_500_perdoc.csv")
+    parser.add_argument(
+        "--out", default="logs/extensions/token_merging/comparison_500_perdoc.csv"
+    )
     args = parser.parse_args()
 
     rows = parse(args.log)

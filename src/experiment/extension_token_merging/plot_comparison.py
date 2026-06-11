@@ -13,6 +13,7 @@
 Both figures use the project palette, Title Case labels, and
 bbox_inches='tight' so labels never clip.
 """
+
 import argparse
 import csv
 import os
@@ -23,7 +24,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-PALETTE = ['#255475', '#5D7F84', '#DCBCAC', '#D6838D', '#F3AE75', '#F8F1E4']
+PALETTE = ["#255475", "#5D7F84", "#DCBCAC", "#D6838D", "#F3AE75", "#F8F1E4"]
 
 STATE_KEYS = ["orig_hd", "orig_merge", "retrain_merge", "trained_2d_merge"]
 STATE_LABELS = ["Hard Drop", "Token Merge", "Trained Merge", "Trained 2D Merge"]
@@ -73,17 +74,40 @@ def plot_perdoc(by_state, out_path):
         losses = sorted(by_state[key])
         x = np.linspace(1, len(losses), len(losses))
         ax.plot(x, losses, color=PALETTE[i], linewidth=1.6, zorder=3)
-        handles.append(mpatches.Patch(facecolor=PALETTE[i], edgecolor="black",
-                                      label=STATE_LABELS[i]))
-    ax.set_xlim(0, max((len(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]), default=1) + 1)
+        handles.append(
+            mpatches.Patch(
+                facecolor=PALETTE[i], edgecolor="black", label=STATE_LABELS[i]
+            )
+        )
+    ax.set_xlim(
+        0,
+        max(
+            (len(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]),
+            default=1,
+        )
+        + 1,
+    )
     ax.set_xlabel("Document Rank (Sorted Ascending Per State)", fontsize=12)
     ax.set_ylabel("Forward Loss", fontsize=12)
     ax.tick_params(axis="both", labelsize=12)
-    ax.set_ylim(0, max((max(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]), default=1.0) * 1.1)
+    ax.set_ylim(
+        0,
+        max(
+            (max(by_state[k]) for k in STATE_KEYS if k in by_state and by_state[k]),
+            default=1.0,
+        )
+        * 1.1,
+    )
 
-    ax.legend(handles=handles, loc="upper right", frameon=False,
-              fontsize=12, handletextpad=0.6, labelspacing=0.7,
-              borderaxespad=1.0)
+    ax.legend(
+        handles=handles,
+        loc="upper right",
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.6,
+        labelspacing=0.7,
+        borderaxespad=1.0,
+    )
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")
@@ -105,9 +129,15 @@ def plot_comparison(means, out_path):
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, m in enumerate(metric_keys):
         offset = (i - 1) * bar_width
-        ax.bar(x + offset, norm[m], bar_width,
-               color=PALETTE[i], edgecolor="black", zorder=3,
-               label=metric_labels[i])
+        ax.bar(
+            x + offset,
+            norm[m],
+            bar_width,
+            color=PALETTE[i],
+            edgecolor="black",
+            zorder=3,
+            label=metric_labels[i],
+        )
 
     ax.set_xticks(x)
     ax.set_xticklabels(labels_present, fontsize=11)
@@ -116,9 +146,17 @@ def plot_comparison(means, out_path):
     ax.set_ylim(0, 1.18)
 
     header_y = 1.04
-    ax.legend(loc="lower right", bbox_to_anchor=(1.0, header_y),
-              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
-              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
+    ax.legend(
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=3,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
     plt.savefig(out_path, bbox_inches="tight")
     plt.close()
     print(f"wrote {out_path}")
@@ -126,10 +164,20 @@ def plot_comparison(means, out_path):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--csv", default="logs/extensions/token_merging/comparison_500.csv")
-    parser.add_argument("--perdoc_csv", default="logs/extensions/token_merging/comparison_500_perdoc.csv")
-    parser.add_argument("--csv_2d", default="logs/extensions/token_merging_2d/comparison_500.csv")
-    parser.add_argument("--perdoc_2d_csv", default="logs/extensions/token_merging_2d/comparison_500_perdoc.csv")
+    parser.add_argument(
+        "--csv", default="logs/extensions/token_merging/comparison_500.csv"
+    )
+    parser.add_argument(
+        "--perdoc_csv",
+        default="logs/extensions/token_merging/comparison_500_perdoc.csv",
+    )
+    parser.add_argument(
+        "--csv_2d", default="logs/extensions/token_merging_2d/comparison_500.csv"
+    )
+    parser.add_argument(
+        "--perdoc_2d_csv",
+        default="logs/extensions/token_merging_2d/comparison_500_perdoc.csv",
+    )
     parser.add_argument("--out_dir", default="output_figures/improvement/token_merging")
     args = parser.parse_args()
 
@@ -137,10 +185,8 @@ def main():
     means = collect_means(args.csv, args.csv_2d)
     by_state = collect_perdoc(args.perdoc_csv, args.perdoc_2d_csv)
 
-    plot_perdoc(by_state,
-                os.path.join(args.out_dir, "loss-landscape.pdf"))
-    plot_comparison(means,
-                    os.path.join(args.out_dir, "comparison.pdf"))
+    plot_perdoc(by_state, os.path.join(args.out_dir, "loss-landscape.pdf"))
+    plot_comparison(means, os.path.join(args.out_dir, "comparison.pdf"))
 
 
 if __name__ == "__main__":

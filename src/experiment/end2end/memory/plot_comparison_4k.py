@@ -1,4 +1,5 @@
 """Paper Figure 12 reproduction. Six models at 4 K context, normalized to LongLoRA."""
+
 import os
 import re
 
@@ -76,15 +77,30 @@ def render(seq_label_k, out_path):
     fig, ax = plt.subplots(figsize=(9, 2.8))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, method in enumerate(METHODS):
-        ax.bar([p + i * bar_width for p in x], norm[method], bar_width,
-               label=METHOD_LABELS[i], color=PALETTE[i], edgecolor="black", zorder=3)
+        ax.bar(
+            [p + i * bar_width for p in x],
+            norm[method],
+            bar_width,
+            label=METHOD_LABELS[i],
+            color=PALETTE[i],
+            edgecolor="black",
+            zorder=3,
+        )
 
     for i, s in enumerate(savings):
         if s is None:
             continue
         xpos = x[i] + 2 * bar_width
-        ax.text(xpos, 0.05, f"{s:.2f}x", ha="center", va="bottom",
-                fontsize=13, rotation=90, color="#222")
+        ax.text(
+            xpos,
+            0.05,
+            f"{s:.2f}x",
+            ha="center",
+            va="bottom",
+            fontsize=13,
+            rotation=90,
+            color="#222",
+        )
 
     ax.set_xticks([p + bar_width for p in x])
     ax.set_xticklabels(MODELS, fontsize=13)
@@ -94,12 +110,27 @@ def render(seq_label_k, out_path):
     ax.set_ylabel("Memory Footprint (Normalized)", fontsize=13)
 
     header_y = 1.06
-    ax.legend(loc="lower left", bbox_to_anchor=(0.0, header_y),
-              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
-              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
-    ax.text(1.0, header_y, f"Sequence Length = {seq_label_k}K",
-            transform=ax.transAxes, ha="right", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        loc="lower left",
+        bbox_to_anchor=(0.0, header_y),
+        ncol=3,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        1.0,
+        header_y,
+        f"Sequence Length = {seq_label_k}K",
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

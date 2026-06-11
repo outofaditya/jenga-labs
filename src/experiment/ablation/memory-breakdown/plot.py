@@ -2,6 +2,7 @@
 Llama 2 7B at 8 K (LoRA, LongLoRA, Jenga) and at 10 K to 16 K under
 Jenga. Categories: model state, activation, others, predictor.
 """
+
 import os
 import re
 
@@ -58,13 +59,15 @@ def read_logs():
             tag = "LongLoRA"
         else:
             tag = "Jenga"
-        rows.append({
-            "case": f"{size_k}K {tag}",
-            "model_states": model_states / 1024,
-            "activations": activations / 1024,
-            "others": others / 1024,
-            "predictors": (predictor_mem / 1024) if tag == "Jenga" else 0.0,
-        })
+        rows.append(
+            {
+                "case": f"{size_k}K {tag}",
+                "model_states": model_states / 1024,
+                "activations": activations / 1024,
+                "others": others / 1024,
+                "predictors": (predictor_mem / 1024) if tag == "Jenga" else 0.0,
+            }
+        )
     return rows
 
 
@@ -83,27 +86,53 @@ def render(out_path):
         left = 0
         for j, key in enumerate(KEYS):
             width = r[key]
-            ax.barh(y_pos[i], width, left=left, color=PALETTE[j],
-                    edgecolor="black", height=bar_height, zorder=3,
-                    label=STAGES[j] if i == 0 else None)
+            ax.barh(
+                y_pos[i],
+                width,
+                left=left,
+                color=PALETTE[j],
+                edgecolor="black",
+                height=bar_height,
+                zorder=3,
+                label=STAGES[j] if i == 0 else None,
+            )
             left += width
 
     ax.set_yticks(y_pos)
     ax.set_yticklabels(cases, fontsize=13)
     ax.tick_params(axis="x", labelsize=13)
     ax.set_xlabel("Memory Footprint (GB)", fontsize=13)
-    totals = [r["model_states"] + r["activations"] + r["others"] + r["predictors"] for r in rows]
+    totals = [
+        r["model_states"] + r["activations"] + r["others"] + r["predictors"]
+        for r in rows
+    ]
     ax.set_xlim(0, max(totals) * 1.05)
 
     header_y = 1.04
     handles, labels = ax.get_legend_handles_labels()
-    ax.legend(handles, labels, loc="lower right",
-              bbox_to_anchor=(1.0, header_y), ncol=4, frameon=False,
-              fontsize=12, handletextpad=0.4, columnspacing=1.0,
-              borderpad=0.0, borderaxespad=0.0)
-    ax.text(-0.13, header_y, "(a) Memory Footprint",
-            transform=ax.transAxes, ha="left", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        handles,
+        labels,
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=4,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.0,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        -0.13,
+        header_y,
+        "(a) Memory Footprint",
+        transform=ax.transAxes,
+        ha="left",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

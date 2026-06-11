@@ -10,6 +10,7 @@ on a held out RedPajama slice under two modes:
 Held out documents are drawn from indices start_index..start_index+N*8
 in the dataset, matching the convention of measure_three_way.py.
 """
+
 import argparse
 import csv
 import math
@@ -39,18 +40,26 @@ def set_RoPE(config, model_max_length):
 
 
 def build_model(base_model, predictor_path, peft_model, seq_len, device):
-    config = get_llama_qk(model_name=base_model, flash_attention=True, pool_size=64, thresh=0.4)
+    config = get_llama_qk(
+        model_name=base_model, flash_attention=True, pool_size=64, thresh=0.4
+    )
     config = set_RoPE(config, seq_len)
     pruned_cfg = torch.load(os.path.join(predictor_path, "pruned_config.pth"))
     config.predictor_layers = pruned_cfg["layers"]
     config.merge_eliminated = False  # will toggle per mode
 
-    tokenizer = AutoTokenizer.from_pretrained(base_model, model_max_length=seq_len, use_fast=True)
+    tokenizer = AutoTokenizer.from_pretrained(
+        base_model, model_max_length=seq_len, use_fast=True
+    )
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
-    model = LlamaForCausalLM.from_pretrained(base_model, torch_dtype=torch.bfloat16, config=config)
-    attn_state_dict = torch.load(os.path.join(predictor_path, "predictor.pth"), map_location="cpu")
+    model = LlamaForCausalLM.from_pretrained(
+        base_model, torch_dtype=torch.bfloat16, config=config
+    )
+    attn_state_dict = torch.load(
+        os.path.join(predictor_path, "predictor.pth"), map_location="cpu"
+    )
     msd = model.state_dict()
     for k, v in attn_state_dict.items():
         if k in msd:
@@ -64,7 +73,9 @@ def build_model(base_model, predictor_path, peft_model, seq_len, device):
 
 
 def load_texts(seq_len, n_docs, start_index=1000):
-    ds = load_dataset("./dataset/RedPajama-Data-1T-Sample", trust_remote_code=True)["train"]
+    ds = load_dataset("./dataset/RedPajama-Data-1T-Sample", trust_remote_code=True)[
+        "train"
+    ]
     texts = []
     end = min(start_index + n_docs * 8, len(ds))
     for row in ds.select(range(start_index, end)):
@@ -76,12 +87,14 @@ def load_texts(seq_len, n_docs, start_index=1000):
 
 
 def run_mode(model, tokenizer, inner_cfg, texts, seq_len, mode, device):
-    inner_cfg.merge_eliminated = (mode == "merged_2d")
+    inner_cfg.merge_eliminated = mode == "merged_2d"
     torch.cuda.empty_cache()
     torch.cuda.reset_peak_memory_stats()
     losses, durations = [], []
     for i, txt in enumerate(texts):
-        ids = tokenizer(txt, return_tensors="pt", truncation=True, max_length=seq_len).input_ids.to(device)
+        ids = tokenizer(
+            txt, return_tensors="pt", truncation=True, max_length=seq_len
+        ).input_ids.to(device)
         if ids.size(1) < seq_len:
             continue
         t0 = time.time()
@@ -91,13 +104,18 @@ def run_mode(model, tokenizer, inner_cfg, texts, seq_len, mode, device):
         loss = float(out.loss.detach().cpu())
         durations.append(dt)
         losses.append(loss)
-        print(f"[{mode}] doc {i + 1}/{len(texts)} loss={loss:.4f} dt={dt:.2f}s", flush=True)
+        print(
+            f"[{mode}] doc {i + 1}/{len(texts)} loss={loss:.4f} dt={dt:.2f}s",
+            flush=True,
+        )
     peak_mb = torch.cuda.max_memory_allocated() / (1024 * 1024)
     return {
         "mode": mode,
         "n_docs": len(losses),
         "mean_loss": sum(losses) / max(len(losses), 1),
-        "ppl_approx": math.exp(sum(losses) / max(len(losses), 1)) if losses else float("nan"),
+        "ppl_approx": math.exp(sum(losses) / max(len(losses), 1))
+        if losses
+        else float("nan"),
         "peak_memory_mb": float(peak_mb),
         "mean_forward_s": sum(durations) / max(len(durations), 1),
     }
@@ -110,7 +128,9 @@ def main():
     parser.add_argument("--predictor_path", default="checkpoints/predictor")
     parser.add_argument("--seq_len", type=int, default=8192)
     parser.add_argument("--n_docs", type=int, default=500)
-    parser.add_argument("--out_csv", default="logs/extensions/token_merging_2d/comparison_500.csv")
+    parser.add_argument(
+        "--out_csv", default="logs/extensions/token_merging_2d/comparison_500.csv"
+    )
     args = parser.parse_args()
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -122,15 +142,27 @@ def main():
 
     rows = []
     print("=== 2d adapter ===", flush=True)
-    model, tokenizer, inner_cfg = build_model(args.base_model, args.predictor_path, args.peft_model, args.seq_len, device)
-    r = run_mode(model, tokenizer, inner_cfg, texts, args.seq_len, "baseline_2d", device)
+    model, tokenizer, inner_cfg = build_model(
+        args.base_model, args.predictor_path, args.peft_model, args.seq_len, device
+    )
+    r = run_mode(
+        model, tokenizer, inner_cfg, texts, args.seq_len, "baseline_2d", device
+    )
     r["label"] = "2D sparsity, no merging"
     rows.append(r)
     r = run_mode(model, tokenizer, inner_cfg, texts, args.seq_len, "merged_2d", device)
     r["label"] = "2D sparsity, token merging"
     rows.append(r)
 
-    fieldnames = ["label", "mode", "n_docs", "mean_loss", "ppl_approx", "peak_memory_mb", "mean_forward_s"]
+    fieldnames = [
+        "label",
+        "mode",
+        "n_docs",
+        "mean_loss",
+        "ppl_approx",
+        "peak_memory_mb",
+        "mean_forward_s",
+    ]
     with out_csv.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
         w.writeheader()
@@ -138,7 +170,10 @@ def main():
             w.writerow({k: r.get(k) for k in fieldnames})
     print(f"wrote {out_csv}", flush=True)
     for r in rows:
-        print(f"{r['label']:42s} loss={r['mean_loss']:.4f} ppl={r['ppl_approx']:.3f} peak={r['peak_memory_mb']:.1f} dt={r['mean_forward_s']:.2f}", flush=True)
+        print(
+            f"{r['label']:42s} loss={r['mean_loss']:.4f} ppl={r['ppl_approx']:.3f} peak={r['peak_memory_mb']:.1f} dt={r['mean_forward_s']:.2f}",
+            flush=True,
+        )
 
 
 if __name__ == "__main__":

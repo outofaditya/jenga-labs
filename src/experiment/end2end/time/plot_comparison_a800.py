@@ -5,6 +5,7 @@ rendered inside the Jenga bar. The script is named `plot_comparison_a800`
 for backward compatibility with the artifact layout; the actual device
 we ran on is the A100 80 GB and that is the label used in the figure.
 """
+
 import os
 import re
 
@@ -72,7 +73,9 @@ def render(seq_label_k, device_tag, device_display, out_path):
     norm = {m: [] for m in METHODS}
     speedups = []
     for i in range(len(MODELS)):
-        ref = max(abs_time["lora"][i], abs_time["longlora"][i], abs_time["jenga"][i], 1.0)
+        ref = max(
+            abs_time["lora"][i], abs_time["longlora"][i], abs_time["jenga"][i], 1.0
+        )
         for m in METHODS:
             norm[m].append(abs_time[m][i] / ref)
         lora = abs_time["lora"][i]
@@ -85,20 +88,43 @@ def render(seq_label_k, device_tag, device_display, out_path):
     fig, ax = plt.subplots(figsize=(9, 2.8))
     ax.grid(axis="y", linestyle="--", alpha=0.6, zorder=0)
     for i, method in enumerate(METHODS):
-        ax.bar([p + i * bar_width for p in x], norm[method], bar_width,
-               label=METHOD_LABELS[i], color=PALETTE[i], edgecolor="black", zorder=3)
+        ax.bar(
+            [p + i * bar_width for p in x],
+            norm[method],
+            bar_width,
+            label=METHOD_LABELS[i],
+            color=PALETTE[i],
+            edgecolor="black",
+            zorder=3,
+        )
 
     for i in range(len(MODELS)):
         for j, method in enumerate(METHODS):
             if abs_time[method][i] == 0:
                 xpos = x[i] + j * bar_width
-                ax.text(xpos, 0.55, "OOM", ha="center", va="bottom",
-                        fontsize=11, color="#cc1f1f", rotation=90)
+                ax.text(
+                    xpos,
+                    0.55,
+                    "OOM",
+                    ha="center",
+                    va="bottom",
+                    fontsize=11,
+                    color="#cc1f1f",
+                    rotation=90,
+                )
         s = speedups[i]
         if s is not None:
             xpos = x[i] + 2 * bar_width
-            ax.text(xpos, 0.55, f"{s:.2f}x", ha="center", va="bottom",
-                    fontsize=12, rotation=90, color="#222")
+            ax.text(
+                xpos,
+                0.55,
+                f"{s:.2f}x",
+                ha="center",
+                va="bottom",
+                fontsize=12,
+                rotation=90,
+                color="#222",
+            )
 
     ax.set_xticks([p + bar_width for p in x])
     ax.set_xticklabels(MODELS, fontsize=13)
@@ -108,12 +134,27 @@ def render(seq_label_k, device_tag, device_display, out_path):
     ax.set_ylabel("Execution Time (Normalized)", fontsize=13)
 
     header_y = 1.06
-    ax.legend(loc="lower left", bbox_to_anchor=(0.0, header_y),
-              ncol=3, frameon=False, fontsize=12, handletextpad=0.4,
-              columnspacing=1.2, borderpad=0.0, borderaxespad=0.0)
-    ax.text(1.0, header_y, f"GPU: {device_display}",
-            transform=ax.transAxes, ha="right", va="bottom",
-            fontsize=13, fontweight="bold")
+    ax.legend(
+        loc="lower left",
+        bbox_to_anchor=(0.0, header_y),
+        ncol=3,
+        frameon=False,
+        fontsize=12,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
+    ax.text(
+        1.0,
+        header_y,
+        f"GPU: {device_display}",
+        transform=ax.transAxes,
+        ha="right",
+        va="bottom",
+        fontsize=13,
+        fontweight="bold",
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)

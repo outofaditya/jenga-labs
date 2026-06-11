@@ -1,23 +1,34 @@
-import math
 import torch
 import triton
 import triton.language as tl
 
+
 @triton.jit
 def _fwd_kernel(
-    Q, K,
+    Q,
+    K,
     # 维度信息
-    B, H, N_CTX,
+    B,
+    H,
+    N_CTX,
     # 输出
-    Out, 
+    Out,
     # strides
-    stride_qb, stride_qh, stride_qm, stride_qk,
-    stride_kb, stride_kh, stride_km, stride_kk,
-    stride_ob, stride_om, stride_on,
+    stride_qb,
+    stride_qh,
+    stride_qm,
+    stride_qk,
+    stride_kb,
+    stride_kh,
+    stride_km,
+    stride_kk,
+    stride_ob,
+    stride_om,
+    stride_on,
     # 常量
     BLOCK_M: tl.constexpr,  # 64
     BLOCK_N: tl.constexpr,  # 64
-    HEAD_DIM: tl.constexpr, # 128
+    HEAD_DIM: tl.constexpr,  # 128
 ):
     """
     对给定的 (b, row_block, col_block) 计算:
@@ -42,8 +53,10 @@ def _fwd_kernel(
     # 计算当前块在行、列、batch 方向的标识
     row_block_idx = tl.program_id(0)  # 对应行方向(序列的维度)的分块
     col_block_idx = tl.program_id(1)  # 对应列方向(序列的维度)的分块
-    b_idx         = tl.program_id(2)  # 对应 batch 的分块（这里简化为1D，如果B较大可再做更多拆分）
-    
+    b_idx = tl.program_id(
+        2
+    )  # 对应 batch 的分块（这里简化为1D，如果B较大可再做更多拆分）
+
     # 计算本块在行/列方向的具体范围
     row_start = row_block_idx * BLOCK_M
     col_start = col_block_idx * BLOCK_N
@@ -63,16 +76,20 @@ def _fwd_kernel(
         # 取 Q_block, 形状: [BLOCK_M, HEAD_DIM]
         # 注意 Q 的存储布局是 [b, h, m, d]，我们要对 row_start + offs_m 这些行取数据
         # 计算地址：Q + b_idx*stride_qb + h_idx*stride_qh + (row_start+offs_m)*stride_qm + 0*stride_qk
-        q_ptrs = Q + b_idx*stride_qb + h_idx*stride_qh \
-                   + (row_start + offs_m[:, None]) * stride_qm \
-                   + offs_dim[None, :]  * stride_qk
+        q_ptrs = (
+            Q
+            + b_idx * stride_qb
+            + h_idx * stride_qh
+            + (row_start + offs_m[:, None]) * stride_qm
+            + offs_dim[None, :] * stride_qk
+        )
         # 载入 Q_block
         # shape = [BLOCK_M, HEAD_DIM]，但在 Triton 中可以把 (BLOCK_M, HEAD_DIM) 看成 (BLOCK_M, 1) 的 2D + for-loop
         # 这里为简便，直接一次性加载
         q_block = tl.load(q_ptrs)  # [BLOCK_M, HEAD_DIM]
 
         # 取 K_block, 形状: [HEAD_DIM, BLOCK_N]
-        # K 的存储是 [b, h, m, d]，但要注意这是 K，而我们这里要做 K^T 的乘法 => Q * K^T 
+        # K 的存储是 [b, h, m, d]，但要注意这是 K，而我们这里要做 K^T 的乘法 => Q * K^T
         # 最简单方法：K 若是 [b,h,N_CTX,HEAD_DIM]，那 K^T 就是 [b,h,HEAD_DIM,N_CTX] => 读的时候把 (m, d) 对调成 (d, m) 即可
         # 计算地址：K + b_idx*stride_kb + h_idx*stride_kh + 0*stride_kk + (col_start + offs_n)*stride_km
         #         这里 (d, m) => (offs_k, offs_n) 但是因为 HEAD_DIM 方向我们一次性都加载 => offs_k 用个 range?
@@ -80,10 +97,14 @@ def _fwd_kernel(
         # 如果还是 [B,H,N_CTX,HEAD_DIM]，要么在外面先转置 K，要么在这里算地址时做翻转。灵活处理即可。
         # 下面假设 K 已经转置好：K.shape = [B,H,HEAD_DIM,N_CTX] => stride_km = stride_kk, stride_kk= stride_km ?
         # 为了让示例代码更直观，这里直接把 K 当成 [B,H,HEAD_DIM,N_CTX] 用，读取 (d, col) = (0..HEAD_DIM, col_start+offs_n)
-        
-        k_ptrs = K + b_idx*stride_kb + h_idx*stride_kh \
-                   + offs_dim[:, None] * stride_km \
-                   + (col_start + offs_n[None, :]) * stride_kk
+
+        k_ptrs = (
+            K
+            + b_idx * stride_kb
+            + h_idx * stride_kh
+            + offs_dim[:, None] * stride_km
+            + (col_start + offs_n[None, :]) * stride_kk
+        )
         # 载入 k_block => shape=[HEAD_DIM, BLOCK_N]
         k_block = tl.load(k_ptrs)
 
@@ -99,12 +120,16 @@ def _fwd_kernel(
     # 下面做块内 reduce-max => shape [1]
     # Triton 里可以手动写 for-loop reduce，也可以用内置 reduce 运算
     row_max = tl.max(acc, axis=1)
-    block_max = tl.max(row_max, axis=0) # 先对 axis=1 reduce => 每行最大值，再对axis=0 reduce => 全块最大值
+    block_max = tl.max(
+        row_max, axis=0
+    )  # 先对 axis=1 reduce => 每行最大值，再对axis=0 reduce => 全块最大值
 
     # 写入输出张量 Out[b, row_block_idx, col_block_idx] = block_max
     # Out 的 shape = [B, N_CTX//64, N_CTX//64]
     # 对应地址：Out + b_idx*stride_ob + row_block_idx*stride_om + col_block_idx*stride_on
-    out_ptrs = Out + b_idx*stride_ob + row_block_idx*stride_om + col_block_idx*stride_on
+    out_ptrs = (
+        Out + b_idx * stride_ob + row_block_idx * stride_om + col_block_idx * stride_on
+    )
     tl.store(out_ptrs, block_max.to(Out.type.element_ty))
 
 
@@ -128,7 +153,9 @@ def block_attn_pool(q: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     assert N % BLOCK == 0, "For simplicity, assume N is multiple of 64."
 
     # 创建输出张量: [B, N//64, N//64], float32 容纳 max-pool 结果
-    out = torch.empty((B, N // BLOCK, N // BLOCK), dtype=torch.bfloat16, device=q.device)
+    out = torch.empty(
+        (B, N // BLOCK, N // BLOCK), dtype=torch.bfloat16, device=q.device
+    )
 
     # 计算 strides（以元素为单位，而不是字节）
     # Q: shape [B, H, N, D]
@@ -156,21 +183,32 @@ def block_attn_pool(q: torch.Tensor, k: torch.Tensor) -> torch.Tensor:
     # 调用 Triton kernel
     _fwd_kernel[grid](
         # 数据
-        q, k,
+        q,
+        k,
         # 尺寸
-        B, H, N,
+        B,
+        H,
+        N,
         # 输出
         out,
         # strides
-        stride_qb, stride_qh, stride_qm, stride_qk,
-        stride_kb, stride_kh, stride_km, stride_kk,
-        stride_ob, stride_om, stride_on,
+        stride_qb,
+        stride_qh,
+        stride_qm,
+        stride_qk,
+        stride_kb,
+        stride_kh,
+        stride_km,
+        stride_kk,
+        stride_ob,
+        stride_om,
+        stride_on,
         # 常量
         BLOCK_M=BLOCK,
         BLOCK_N=BLOCK,
         HEAD_DIM=128,  # 这里假设 HEAD_DIM=128
         num_stages=2,  # 这里可根据需求调优
-        num_warps=4,   # 这里可根据需求调优
+        num_warps=4,  # 这里可根据需求调优
     )
 
     # 根据需求，最后还要做一次 / 64
@@ -194,7 +232,7 @@ def demo():
     k = torch.randn((B, H, N, D), dtype=torch.bfloat16, device=device)
 
     # Triton 分块结果
-    out_triton = block_attn_pool(q, k.transpose(2,3).contiguous())  # [B, N//64, N//64]
+    out_triton = block_attn_pool(q, k.transpose(2, 3).contiguous())  # [B, N//64, N//64]
 
     # 下面做一个参考计算(非分块，直接 matmul)，并比较结果
     # 参考: attn_weight = sum_{h} ReLU( Q[h] @ K[h].T )   => shape = [B,N,N]
@@ -218,12 +256,14 @@ def demo():
     #     pool_ref = torch.nn.functional.max_pool2d(attn_4d, kernel_size=64, stride=64)  # [B,1,N//64,N//64]
     #     pool_ref = pool_ref.squeeze(1)  # [B, N//64, N//64]
     #     pool_ref /= 64.0
-    
-    attn_weight = torch.matmul(q, k.transpose(-2,-1))    # [B, H, N, N]
-    for i in range(attn_weight.size(1)):                 # 对每个 head 做 ReLU
+
+    attn_weight = torch.matmul(q, k.transpose(-2, -1))  # [B, H, N, N]
+    for i in range(attn_weight.size(1)):  # 对每个 head 做 ReLU
         attn_weight[:, i][attn_weight[:, i] < 0] = 0
-    attn_weight = attn_weight.sum(dim=1)                 # 在 head 维度上求和 -> [B, N, N]
-    attn_maxpool = torch.nn.functional.max_pool2d(attn_weight, kernel_size=64, stride=64)  # [B, N//64, N//64]
+    attn_weight = attn_weight.sum(dim=1)  # 在 head 维度上求和 -> [B, N, N]
+    attn_maxpool = torch.nn.functional.max_pool2d(
+        attn_weight, kernel_size=64, stride=64
+    )  # [B, N//64, N//64]
     attn_maxpool /= 64
 
     # 对比误差

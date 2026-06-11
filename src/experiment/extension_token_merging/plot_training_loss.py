@@ -7,6 +7,7 @@ Two palettes:
 The legend mirrors the rest of the report: rectangular swatches with a
 black border, Title Case labels, anchored to the top right.
 """
+
 import argparse
 import ast
 import os
@@ -56,7 +57,9 @@ def moving_average(values, window):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--log", default="logs/extensions/token_merging/train-llama2-8192-a100.log")
+    parser.add_argument(
+        "--log", default="logs/extensions/token_merging/train-llama2-8192-a100.log"
+    )
     parser.add_argument("--out", default="output_figures/improvement/train-loss-i4.pdf")
     parser.add_argument("--palette", choices=["cool", "warm"], default="cool")
     parser.add_argument("--window", type=int, default=10)
@@ -79,14 +82,25 @@ def main():
 
     handles = [
         mpatches.Patch(facecolor=palette["raw"], edgecolor="black", label="Raw"),
-        mpatches.Patch(facecolor=palette["smoothed"], edgecolor="black",
-                       label=f"{args.window} Step Moving Average"),
+        mpatches.Patch(
+            facecolor=palette["smoothed"],
+            edgecolor="black",
+            label=f"{args.window} Step Moving Average",
+        ),
     ]
     header_y = 1.04
-    ax.legend(handles=handles, loc="lower right",
-              bbox_to_anchor=(1.0, header_y), ncol=2, frameon=False,
-              fontsize=11, handletextpad=0.4, columnspacing=1.2,
-              borderpad=0.0, borderaxespad=0.0)
+    ax.legend(
+        handles=handles,
+        loc="lower right",
+        bbox_to_anchor=(1.0, header_y),
+        ncol=2,
+        frameon=False,
+        fontsize=11,
+        handletextpad=0.4,
+        columnspacing=1.2,
+        borderpad=0.0,
+        borderaxespad=0.0,
+    )
     plt.savefig(args.out, bbox_inches="tight")
     plt.close()
     print(f"wrote {args.out} ({len(losses)} points)")

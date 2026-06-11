@@ -1,4 +1,5 @@
 """Paper Figure 13 middle panel. Step time on the A40 48 GB device."""
+
 import os
 import sys
 

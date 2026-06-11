@@ -2,6 +2,7 @@
 on LongAlign (LA) and RedPajama (RP). One panel, four smooth lines, legend
 inside the chart on the upper right.
 """
+
 import json
 
 import matplotlib.patches as mpatches
@@ -10,15 +11,33 @@ import matplotlib.pyplot as plt
 
 def load_loss(path):
     with open(path) as f:
-        return [entry["loss"] for entry in json.load(f)["log_history"] if "loss" in entry]
+        return [
+            entry["loss"] for entry in json.load(f)["log_history"] if "loss" in entry
+        ]
 
 
 LIMIT = 400
 SERIES = [
-    ("Llama2-LA",     "logs/ablations/predictor/llama2_16384_predictor_la/trainer_state.json",     "#255475"),
-    ("Llama2-RP",     "logs/ablations/predictor/llama2_16384_predictor_red/trainer_state.json",    "#5D7F84"),
-    ("OPT6.7B-LA",    "logs/ablations/predictor/opt-6.7b_16384_predictor_la/trainer_state.json",   "#DCBCAC"),
-    ("OPT6.7B-RP",    "logs/ablations/predictor/opt-6.7b_16384_predictor_red/trainer_state.json",  "#D6838D"),
+    (
+        "Llama2-LA",
+        "logs/ablations/predictor/llama2_16384_predictor_la/trainer_state.json",
+        "#255475",
+    ),
+    (
+        "Llama2-RP",
+        "logs/ablations/predictor/llama2_16384_predictor_red/trainer_state.json",
+        "#5D7F84",
+    ),
+    (
+        "OPT6.7B-LA",
+        "logs/ablations/predictor/opt-6.7b_16384_predictor_la/trainer_state.json",
+        "#DCBCAC",
+    ),
+    (
+        "OPT6.7B-RP",
+        "logs/ablations/predictor/opt-6.7b_16384_predictor_red/trainer_state.json",
+        "#D6838D",
+    ),
 ]
 
 
@@ -32,11 +51,19 @@ def render(out_path):
 
     ax.tick_params(axis="both", labelsize=12)
 
-    handles = [mpatches.Patch(facecolor=c, edgecolor="black", label=lbl)
-               for lbl, _, c in SERIES]
-    ax.legend(handles=handles, loc="upper right", frameon=False,
-              fontsize=13, handletextpad=0.6, labelspacing=0.7,
-              borderaxespad=1.0)
+    handles = [
+        mpatches.Patch(facecolor=c, edgecolor="black", label=lbl)
+        for lbl, _, c in SERIES
+    ]
+    ax.legend(
+        handles=handles,
+        loc="upper right",
+        frameon=False,
+        fontsize=13,
+        handletextpad=0.6,
+        labelspacing=0.7,
+        borderaxespad=1.0,
+    )
 
     fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
