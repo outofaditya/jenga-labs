@@ -288,7 +288,7 @@ We report this as an honest negative result that bounds the regime in which Toke
 
 ![LoRA training loss on the 2D sparsity model](output_figures/extensions/token_merging/train-loss-i5.pdf)
 
-*Figure 22. Training loss for the 2D sparsity adapter (Jenga + LongLoRA shifted attention + post hoc broadcast merging). The training trace is noisier and converges to a higher band (approximately 2.4–2.7) than the Token Merging curve in Figure 21. The shifted attention's head split contributes most of the variance.*
+*Figure 22. Training loss trajectory for the 2D sparsity adapter (Jenga token sparsity composed with LongLoRA shifted attention, with post hoc broadcast merging active from step zero) drawn in the warm palette to mark the negative result. Raw loss in peach, ten step moving average in pink. Compared with the cool curve in Figure 21, the trace is noisier and the converged band sits roughly one full unit higher (approximately 2.4 to 2.7 versus 1.4 to 1.6). The shifted attention's head split is the dominant source of the residual noise at the same step budget, and explains why the Section 6.2 evaluation row 4 lands above row 3.*
 
 ## 7. Alternative Approaches Evaluated
 
